@@ -96,6 +96,21 @@ test('a shared report link has its own preview', async () => {
   assert.match(data, new RegExp(`og:url" content="http://127.0.0.1:\\d+/\\?r=${r.id}"`));
 });
 
+test('link previews use the public address, never an internal one', async () => {
+  // Behind a proxy that forwards the public host.
+  const fwd = await app.api('GET', '/', { headers: { 'x-forwarded-host': 'banjir.example', 'x-forwarded-proto': 'https' } });
+  assert.match(fwd.data, /og:image" content="https:\/\/banjir\.example\/icons\/og-image\.png"/);
+  // Behind a proxy that hides it (like AI Studio): falls back to PUBLIC_URL.
+  const hidden = await spawnServer(app.dbUrl, { PUBLIC_URL: 'https://public.example/' });
+  try {
+    const html = await (await fetch(hidden.base + '/')).text();
+    assert.match(html, /og:image" content="https:\/\/public\.example\/icons\/og-image\.png"/);
+    assert.ok(!html.includes('127.0.0.1'));
+  } finally {
+    hidden.stop();
+  }
+});
+
 test('report list is cached for 30 seconds and refreshed after changes', async () => {
   const before = (await app.api('GET', '/api/reports')).data.length;
   await app.sql("insert into reports(type,status,area,details,who) values('flood','danger','TEST direct','x','x')");

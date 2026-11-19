@@ -262,7 +262,17 @@ async function seedHotspots() {
 // ---------- the page, with link previews for WhatsApp ----------
 const INDEX_TEMPLATE = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const OG_MARKER = '<!--OG-->';
-const siteOrigin = req => `${req.protocol}://${req.get('host')}`;
+// Public address for link previews. AI Studio's proxy hands the app an internal Host (localhost:3000), and
+// WhatsApp needs a public image URL, so internal hosts are replaced by PUBLIC_URL. Set PUBLIC_URL to change it,
+// or to an empty string to always use the request's own host.
+const PUBLIC_URL = (process.env.PUBLIC_URL ?? 'https://puncak-alam-community-alerts.ai.studio').replace(/\/+$/, '');
+function siteOrigin(req) {
+  const host = (req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim();
+  const internal = /^(localhost|127\.\d+\.\d+\.\d+|\[::1\]|0\.0\.0\.0)(:\d+)?$/i.test(host);
+  if ((internal || !host) && PUBLIC_URL) return PUBLIC_URL;
+  const proto = (req.get('x-forwarded-proto') || req.protocol || 'https').split(',')[0].trim();
+  return `${proto}://${host}`;
+}
 async function sendIndex(req, res) {
   let report = null;
   const id = Number(req.query.r);

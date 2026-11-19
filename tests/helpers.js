@@ -12,7 +12,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export async function spawnServer(dbUrl, extraEnv = {}) {
   const child = spawn(process.execPath, ['--no-warnings', 'server.js'], {
     cwd: ROOT,
-    env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, PORT: '0', DATABASE_URL: dbUrl, DATABASE_URL_UNPOOLED: dbUrl, ...extraEnv },
+    env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, PORT: '0', DATABASE_URL: dbUrl, DATABASE_URL_UNPOOLED: dbUrl, PUBLIC_URL: '', ...extraEnv },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let log = '';
