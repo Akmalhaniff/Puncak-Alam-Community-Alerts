@@ -1,5 +1,7 @@
 import { relations } from 'drizzle-orm';
-import { integer, pgTable, serial, text, timestamp, doublePrecision, boolean } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, text, timestamp, doublePrecision, boolean, customType } from 'drizzle-orm/pg-core';
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -21,6 +23,16 @@ export const reports = pgTable('reports', {
   lng: doublePrecision('lng'),
   approximate: boolean('approximate').default(true),
   time: timestamp('time').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// One optional photo per report, stored compressed (JPEG, metadata stripped). Deleted with its report.
+export const reportPhotos = pgTable('report_photos', {
+  reportId: integer('report_id').primaryKey().references(() => reports.id, { onDelete: 'cascade' }),
+  mime: text('mime').notNull(),
+  thumb: bytea('thumb').notNull(),
+  fullImage: bytea('full_image').notNull(),
+  bytes: integer('bytes').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

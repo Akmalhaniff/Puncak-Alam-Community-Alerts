@@ -48,7 +48,7 @@ export const createPool = () => {
   return global._postgresPool;
 };
 
-const pool = createPool();
+export const pool = createPool();
 export const db = drizzle(pool, { schema });
 
 // Creates the tables if they don't exist yet, so a brand-new database (e.g. a fresh Neon project)
@@ -98,5 +98,13 @@ async function runSchemaSql(conn: { query: (sql: string) => Promise<unknown> }) 
     );
     CREATE INDEX IF NOT EXISTS reports_time_idx ON reports (time DESC);
     CREATE INDEX IF NOT EXISTS reports_user_id_idx ON reports (user_id);
+    CREATE TABLE IF NOT EXISTS report_photos (
+      report_id integer PRIMARY KEY REFERENCES reports(id) ON DELETE CASCADE,
+      mime text NOT NULL,
+      thumb bytea NOT NULL,
+      full_image bytea NOT NULL,
+      bytes integer NOT NULL,
+      created_at timestamp DEFAULT now()
+    );
   `);
 }

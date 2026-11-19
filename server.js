@@ -3,8 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createHash, timingSafeEqual } from 'crypto';
 import { db, ensureSchema } from './src/db/index.ts';
-import { reports, users } from './src/db/schema.ts';
-import { desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { reportPhotos, reports, users } from './src/db/schema.ts';
+import { desc, eq, getTableColumns, inArray, lt, sql } from 'drizzle-orm';
 import { adminAuth } from './src/lib/firebase-admin.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,7 +21,9 @@ const ADMIN_EMAIL_SHA256 = 'c7a6c722479da7e171185723ab6ef8b56aac1119721d4bb6fd67
 
 // Cloud Run and most hosts sit behind exactly one proxy; this makes req.ip the real client IP.
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '10kb' }));
+const smallJson = express.json({ limit: '10kb' });
+const reportJson = express.json({ limit: '800kb' });
+app.use((req, res, next) => (req.method === 'POST' && req.path === '/api/reports' ? reportJson : smallJson)(req, res, next));
 
 // Only serve the files the browser needs — never the server code, src/ or node_modules.
 const PUBLIC_FILES = {
@@ -136,32 +138,72 @@ function posterName(signedIn, typedName) {
   return typedName || 'Community member';
 }
 
-// ---------- seed ----------
+// ---------- photos ----------
 
-async function seedInitialReports() {
-  await ensureSchema();
-  const existing = await db.select().from(reports).limit(1);
-  if (existing.length === 0) {
-    console.log('Seeding initial community reports...');
-    const initial = [
-      { type: 'road', status: 'clear', area: 'Persiaran Mokhtar Dahari', details: 'Clear; ordinary traffic. Community update from the morning commute.', who: 'Community member', time: new Date('2026-11-19T09:18:00'), lat: 3.212, lng: 101.434, approximate: true },
-      { type: 'road', status: 'clear', area: 'Avatar route', details: 'Reported passable in both directions. Conditions may have changed since this post.', who: 'Community member', time: new Date('2026-11-19T06:19:00'), lat: 3.222, lng: 101.447, approximate: true },
-      { type: 'flood', status: 'danger', area: 'Fasa 1 traffic-light junction', details: 'Flooding reported at the junction; a later message suggested an alternate route. Treat this as an old observation.', who: 'Community member', time: new Date('2026-11-18T17:03:00'), lat: 3.212, lng: 101.434, approximate: true },
-      { type: 'flood', status: 'danger', area: 'Alam Suria–Jeram, before Simpang 4', details: 'Reporter said water was around shin height and rising. This is a previous-day report.', who: 'Community member', time: new Date('2026-11-18T16:14:00'), lat: 3.241, lng: 101.413, approximate: true },
-      { type: 'weather', status: 'uncertain', area: 'Hillpark', details: 'Heavy rain reported in the evening. No current water-level confirmation in the chat excerpt.', who: 'Community member', time: new Date('2026-11-18T21:38:00'), lat: 3.211, lng: 101.462, approximate: true }
-    ];
-    for (const r of initial) {
-      await db.insert(reports).values(r);
+const PHOTO_LIMITS = { thumb: 80 * 1024, full: 500 * 1024 };
+
+// Removes metadata segments (EXIF incl. GPS location, XMP, IPTC, comments) from a JPEG; keeps the image data.
+// Returns null if the bytes aren't a well-formed JPEG.
+function stripJpegMetadata(buf) {
+  if (buf.length < 4 || buf[0] !== 0xff || buf[1] !== 0xd8) return null;
+  const parts = [buf.subarray(0, 2)];
+  let i = 2;
+  while (i + 4 <= buf.length) {
+    if (buf[i] !== 0xff) return null;
+    const marker = buf[i + 1];
+    if (marker === 0xda || marker === 0xd9) { // start of scan / end of image: the rest is image data
+      parts.push(buf.subarray(i));
+      return Buffer.concat(parts);
     }
-    console.log('Seed reports inserted successfully.');
+    const len = buf.readUInt16BE(i + 2);
+    if (len < 2 || i + 2 + len > buf.length) return null;
+    const isMetadata = (marker >= 0xe1 && marker <= 0xef) || marker === 0xfe;
+    if (!isMetadata) parts.push(buf.subarray(i, i + 2 + len));
+    i += 2 + len;
+  }
+  return null;
+}
+
+function decodeJpegDataUrl(value, maxBytes) {
+  if (typeof value !== 'string') return null;
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(value);
+  if (!m) return null;
+  const raw = Buffer.from(m[1], 'base64');
+  if (!raw.length || raw.length > maxBytes) return null;
+  return stripJpegMetadata(raw);
+}
+
+// photo: { thumb, full } as JPEG data URLs (the page compresses them before upload).
+function parsePhoto(photo) {
+  if (photo == null) return { value: null };
+  const thumb = decodeJpegDataUrl(photo.thumb, PHOTO_LIMITS.thumb);
+  const full = decodeJpegDataUrl(photo.full, PHOTO_LIMITS.full);
+  if (!thumb || !full) return { error: 'Photo must be a JPEG under 500 KB. Please try another photo.' };
+  return { value: { thumb, full } };
+}
+
+// ---------- retention ----------
+
+// Reports (and their photos, via ON DELETE CASCADE) are deleted automatically after this many days.
+const RETENTION_DAYS = 7;
+
+async function deleteExpiredReports() {
+  try {
+    const cutoff = new Date(Date.now() - RETENTION_DAYS * 86400000);
+    const removed = await db.delete(reports).where(lt(reports.time, cutoff)).returning({ id: reports.id });
+    if (removed.length) console.log(`Auto-clear: deleted ${removed.length} report(s) older than ${RETENTION_DAYS} days.`);
+  } catch (err) {
+    console.warn('Auto-clear failed (will retry next hour):', err.cause?.message || err.message);
   }
 }
 
-// Set up tables and seed data, retrying while the database wakes up (Neon's free tier sleeps when idle).
+// Set up tables, then start the hourly auto-clear. Retries while the database wakes up (Neon's free tier sleeps when idle).
 async function prepareDatabase(attempt = 1) {
   try {
-    await seedInitialReports();
+    await ensureSchema();
     console.log('Database ready.');
+    await deleteExpiredReports();
+    setInterval(deleteExpiredReports, 60 * 60 * 1000).unref();
   } catch (err) {
     const retryIn = Math.min(60, 5 * attempt);
     console.warn(`Database not ready (attempt ${attempt}): ${err.cause?.message || err.message}. Retrying in ${retryIn}s.`);
@@ -175,11 +217,35 @@ setTimeout(prepareDatabase, 1000);
 
 app.get('/api/reports', async (_req, res) => {
   try {
-    const allReports = await db.select().from(reports).orderBy(desc(reports.time)).limit(500);
+    const allReports = await db.select({
+      ...getTableColumns(reports),
+      hasPhoto: sql`exists (select 1 from report_photos p where p.report_id = ${reports.id})`.mapWith(Boolean),
+    }).from(reports).orderBy(desc(reports.time)).limit(500);
     res.json(allReports);
   } catch (error) {
     console.error('Failed to fetch reports:', error);
     res.status(500).json({ error: 'Failed to fetch reports' });
+  }
+});
+
+app.get('/api/reports/:id/photo', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).end();
+  const full = req.query.size === 'full';
+  try {
+    const [row] = await db.select({ mime: reportPhotos.mime, data: full ? reportPhotos.fullImage : reportPhotos.thumb })
+      .from(reportPhotos).where(eq(reportPhotos.reportId, id)).limit(1);
+    if (!row) return res.status(404).end();
+    res.set({
+      'Content-Type': row.mime,
+      'Cache-Control': `public, max-age=${RETENTION_DAYS * 86400}, immutable`,
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Security-Policy': "default-src 'none'",
+    });
+    res.send(row.data);
+  } catch (err) {
+    console.error('Failed to load photo:', err);
+    res.status(500).end();
   }
 });
 
@@ -194,14 +260,25 @@ app.get('/api/me', async (req, res) => {
 app.post('/api/reports', rateLimitWrites, async (req, res) => {
   const { value, error } = validateReport(req.body);
   if (error) return res.status(400).json({ error });
+  const photo = parsePhoto(req.body?.photo);
+  if (photo.error) return res.status(400).json({ error: photo.error });
   try {
     const signedIn = await getSignedInUser(req);
-    const [created] = await db.insert(reports).values({
-      ...value,
-      userId: signedIn?.dbUser.id ?? null,
-      who: posterName(signedIn, value.who),
-      time: new Date(),
-    }).returning();
+    const created = await db.transaction(async tx => {
+      const [row] = await tx.insert(reports).values({
+        ...value,
+        userId: signedIn?.dbUser.id ?? null,
+        who: posterName(signedIn, value.who),
+        time: new Date(),
+      }).returning();
+      if (photo.value) {
+        await tx.insert(reportPhotos).values({
+          reportId: row.id, mime: 'image/jpeg', thumb: photo.value.thumb, fullImage: photo.value.full,
+          bytes: photo.value.thumb.length + photo.value.full.length,
+        });
+      }
+      return { ...row, hasPhoto: !!photo.value };
+    });
     res.status(201).json(created);
   } catch (err) {
     console.error('Failed to create report:', err);
@@ -277,8 +354,12 @@ const parseIds = value => (Array.isArray(value) ? value : [])
 app.get('/api/admin/health', async (_req, res) => {
   const started = Date.now();
   try {
-    const [{ count }] = await db.select({ count: sql`count(*)::int` }).from(reports);
-    res.json({ db: { ok: true, ms: Date.now() - started, reports: count } });
+    const [{ count, photos, size }] = await db.select({
+      count: sql`count(*)::int`,
+      photos: sql`(select count(*)::int from report_photos)`,
+      size: sql`pg_database_size(current_database())::bigint`.mapWith(Number),
+    }).from(reports);
+    res.json({ db: { ok: true, ms: Date.now() - started, reports: count, photos, sizeMB: Math.round(size / 1048576 * 10) / 10, retentionDays: RETENTION_DAYS } });
   } catch (err) {
     res.json({ db: { ok: false, ms: Date.now() - started, error: err.cause?.message || err.message } });
   }
@@ -291,6 +372,7 @@ app.get('/api/admin/reports', async (_req, res) => {
       details: reports.details, who: reports.who, lat: reports.lat, lng: reports.lng,
       approximate: reports.approximate, time: reports.time, userId: reports.userId,
       authorEmail: users.email,
+      hasPhoto: sql`exists (select 1 from report_photos p where p.report_id = ${reports.id})`.mapWith(Boolean),
     }).from(reports).leftJoin(users, eq(reports.userId, users.id)).orderBy(desc(reports.time)).limit(2000);
     res.json(rows);
   } catch (err) {

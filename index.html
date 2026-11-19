@@ -128,6 +128,33 @@
     .hs-popup small{display:block;color:#6d7b76;margin-top:3px}
     .fab{display:none}
 
+    [hidden]{display:none!important}
+    .nowrap{white-space:nowrap}
+    /* ---- language switch ---- */
+    .lang-switch{display:flex;border:1px solid #49635c;border-radius:10px;overflow:hidden}
+    .lang-switch button{border:0;background:transparent;color:#d1ddd8;font-size:11px;font-weight:800;padding:7px 10px;letter-spacing:.04em}
+    .lang-switch button[aria-pressed="true"]{background:var(--lime);color:#133735}
+    /* ---- notice, form helpers ---- */
+    .notice-small{display:block;margin-top:4px;color:#7a7350}
+    .row-inline{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+    .pin-status{font-size:12px;color:#71807c}
+    .pin-status.picked{color:#28694f;font-weight:700}
+    .field-hint{display:block;margin-top:6px;font-size:11px;color:#7d8984}
+    .visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+    .photo-btn{cursor:pointer;display:inline-flex;align-items:center}
+    .photo-btn:focus-within,#rPhoto:focus-visible + .photo-preview{outline:2px solid #5d9b82}
+    .photo-preview{display:flex;align-items:center;gap:8px}
+    .photo-preview img{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+    /* ---- photos in reports ---- */
+    .report-photo{display:block;margin-top:8px;width:fit-content}
+    .report-photo img{display:block;width:100%;max-width:260px;max-height:200px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#eef1ea}
+    .popup-photo{display:block;width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-bottom:6px}
+    /* ---- footer ---- */
+    .site-footer{max-width:1200px;margin:0 auto;padding:22px 24px 34px;text-align:center;color:#6d7b76}
+    .footer-line{margin:0;font-size:13px;font-weight:600}
+    .dev-name{display:inline-block;font-weight:800;color:#133735;background:var(--lime);padding:2px 9px;border-radius:8px;letter-spacing:.01em;transform:rotate(-1.5deg)}
+    .footer-sub{margin:6px 0 0;font-size:11px;color:#8a9690}
+
     /* ---- phones ---- */
     @media (max-width: 640px){
       .top{padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));gap:10px}
@@ -185,7 +212,11 @@
       .field input,.field select,.field textarea{font-size:16px;padding:12px}
       .form-buttons{position:sticky;bottom:0;background:#fff;padding-top:8px}
       .form-buttons .btn{flex:1;padding:14px}
-      #choosePin{padding:11px 14px}
+      #choosePin,.photo-btn{padding:11px 14px}
+      .lang-switch button{padding:8px 9px}
+      .report-photo img{max-width:100%;max-height:240px}
+      .site-footer{padding:6px 16px calc(96px + env(safe-area-inset-bottom))}
+      .shell{padding-bottom:12px}
     }
   </style>
 </head>
@@ -193,108 +224,309 @@
   <header class="top">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5 20 6v5.7c0 5-3.4 8.1-8 9.8-4.6-1.7-8-4.8-8-9.8V6l8-3.5Z" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 13.2c1.8-1.2 3.1-1.2 4.8 0 1.7 1.2 3.1 1.2 5 0M8.2 16.1c1.2-.8 2.2-.8 3.4 0 1.2.8 2.2.8 3.5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
-      <span>Puncak Alam Community Alerts</span>
+      <span data-t="brand">Puncak Alam Community Alerts</span>
     </div>
     <div class="top-right">
-      <span><i class="pulse"></i>Community Board</span>
-      <a class="admin-link" id="adminLink" href="/admin" hidden>Admin</a>
-      <div id="authContainer">
-        <button class="auth-btn" id="googleSignInBtn">Sign in with Google</button>
+      <div class="lang-switch" role="group" data-t-aria="lang_label" aria-label="Language">
+        <button type="button" data-lang="ms">BM</button>
+        <button type="button" data-lang="en">EN</button>
       </div>
+      <a class="admin-link" id="adminLink" href="/admin" hidden>Admin</a>
+      <div id="authContainer"></div>
     </div>
   </header>
 
   <main class="shell">
     <section class="welcome">
       <div>
-        <div class="eyebrow">Puncak Alam · community reported</div>
-        <h1>See where water is rising.</h1>
-        <p>Map flood and road updates with a clear location and report time.</p>
+        <div class="eyebrow" data-t="eyebrow"></div>
+        <h1 data-t="headline"></h1>
+        <p data-t="lead"></p>
       </div>
       <div class="actions">
-        <button class="btn" id="reportOpen">＋ Report flooding or a road hazard</button>
+        <button class="btn" id="reportOpen" data-t="report_btn"></button>
       </div>
     </section>
 
     <div class="notice">
-      <span class="notice-icon">◉</span>
-      <div><b>Check the time and location before sharing.</b> Never drive or walk through floodwater. If anyone is in immediate danger, call <a href="tel:999">999</a>.</div>
+      <span class="notice-icon" aria-hidden="true">⚠️</span>
+      <div><span data-t-html="notice"></span><small class="notice-small" data-t="notice_retention"></small></div>
     </div>
 
     <section class="layout">
       <div class="panel">
         <div class="panel-head">
-          <div><h2>Area signal board</h2><p>Street map and time-stamped community observations</p></div>
-          <span class="live-label"><i></i>Community reported</span>
+          <div><h2 data-t="map_title"></h2><p data-t="map_sub"></p></div>
+          <span class="live-label"><i></i><span data-t="live_label"></span></span>
         </div>
-        <div class="map" id="map" role="application" aria-label="Interactive map of Puncak Alam">
-          <span class="map-caption">Pins show approximate areas · tap map to choose report point</span>
+        <div class="map" id="map" role="application" data-t-aria="map_aria">
+          <span class="map-caption" data-t="map_caption"></span>
         </div>
         <div class="hotspot-bar">
-          <label class="hs-toggle"><input type="checkbox" id="hsToggle" checked /><span class="hs-swatch" aria-hidden="true"></span>Flood-prone spots</label>
-          <span class="hs-hint">Tap the map to choose a point for your next report.</span>
-          <button type="button" class="hs-list-btn" id="hsListBtn" aria-expanded="false" aria-controls="hsList">See list</button>
+          <label class="hs-toggle"><input type="checkbox" id="hsToggle" checked /><span class="hs-swatch" aria-hidden="true"></span><span data-t="hs_toggle"></span></label>
+          <span class="hs-hint" data-t="hs_hint"></span>
+          <button type="button" class="hs-list-btn" id="hsListBtn" aria-expanded="false" aria-controls="hsList"></button>
         </div>
         <div class="hs-list" id="hsList" hidden></div>
-        <div class="filters" role="group" aria-label="Filter reports">
-          <button class="filter active" data-filter="all">All updates</button>
-          <button class="filter" data-filter="flood">Flood</button>
-          <button class="filter" data-filter="road">Roads</button>
-          <button class="filter" data-filter="weather">Rain & weather</button>
+        <div class="filters" role="group" data-t-aria="filters_aria">
+          <button class="filter active" data-filter="all" data-t="f_all"></button>
+          <button class="filter" data-filter="flood" data-t="f_flood"></button>
+          <button class="filter" data-filter="road" data-t="f_road"></button>
+          <button class="filter" data-filter="weather" data-t="f_weather"></button>
         </div>
         <div class="feed" id="feed"></div>
       </div>
-
     </section>
 
-    <p class="bottom-note">For genuine emergencies, call <a href="https://www.malaysia.gov.my/en/topics/mers-999-emergency-line" target="_blank" rel="noopener">MERS 999</a>.</p>
+    <p class="bottom-note"><span data-t="bottom_note"></span> <a href="https://www.malaysia.gov.my/en/topics/mers-999-emergency-line" target="_blank" rel="noopener">MERS 999</a>.</p>
   </main>
+
+  <footer class="site-footer">
+    <p class="footer-line"><span data-t="footer_a"></span> <span class="nowrap"><span class="dev-name">akmalhanif</span> <span data-t="footer_b"></span></span></p>
+    <p class="footer-sub" data-t="footer_sub"></p>
+  </footer>
 
   <dialog id="reportDialog">
     <form class="modal" id="reportForm">
       <div class="modal-head">
-        <div><h2>Report flooding or a road hazard</h2><p>Include the specific area and when you saw it.</p></div>
-        <button class="x" type="button" data-close aria-label="Close">×</button>
+        <div><h2 data-t="form_title"></h2><p data-t="form_sub"></p></div>
+        <button class="x" type="button" data-close data-t-aria="close">×</button>
       </div>
       <div class="form">
         <div class="form-row">
-          <div class="field"><label for="rArea">Area or road</label><input id="rArea" required maxlength="70" placeholder="e.g. Fasa 1, near traffic lights" /></div>
-          <div class="field"><label for="rType">Update type</label><select id="rType"><option value="flood">Flood / water level</option><option value="road">Road condition</option><option value="weather">Heavy rain</option></select></div>
+          <div class="field"><label for="rArea" data-t="f_area"></label><input id="rArea" required maxlength="70" data-t-ph="f_area_ph" /></div>
+          <div class="field"><label for="rType" data-t="f_type"></label><select id="rType"><option value="flood" data-t="type_flood"></option><option value="road" data-t="type_road"></option><option value="weather" data-t="type_weather"></option></select></div>
         </div>
         <div class="form-row">
-          <div class="field"><label for="rStatus">What are you seeing?</label><select id="rStatus"><option value="danger">Flooded / rising water</option><option value="uncertain">Use caution / not confirmed</option><option value="clear">Clear at this time</option></select></div>
-          <div class="field"><label for="rName">Name (optional)</label><input id="rName" maxlength="40" placeholder="Your name" /></div>
+          <div class="field"><label for="rStatus" data-t="f_status"></label><select id="rStatus"><option value="danger" data-t="status_danger_opt"></option><option value="uncertain" data-t="status_uncertain_opt"></option><option value="clear" data-t="status_clear_opt"></option></select></div>
+          <div class="field"><label for="rName" data-t="f_name"></label><input id="rName" maxlength="40" data-t-ph="f_name_ph" /></div>
         </div>
         <div class="field">
-          <label>Map location</label>
-          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
-            <button class="btn secondary small" type="button" id="choosePin">Choose on map</button>
-            <span id="pinStatus" style="font-size:11px;color:#71807c">No pin selected</span>
+          <label data-t="f_spot"></label>
+          <div class="row-inline">
+            <button class="btn secondary small" type="button" id="choosePin" data-t="f_spot_btn"></button>
+            <span id="pinStatus" class="pin-status"></span>
           </div>
         </div>
-        <div class="field"><label for="rDetails">Short details</label><textarea id="rDetails" required maxlength="240" placeholder="Water level, landmark, direction of travel…"></textarea></div>
-        <div class="form-note">Your report is timestamped when posted.</div>
+        <div class="field">
+          <label for="rPhoto" data-t="f_photo"></label>
+          <div class="row-inline">
+            <label class="btn secondary small photo-btn" for="rPhoto" data-t="f_photo_btn"></label>
+            <input type="file" id="rPhoto" accept="image/*" class="visually-hidden" />
+            <div class="photo-preview" id="photoPreview" hidden>
+              <img id="photoImg" alt="" />
+              <button type="button" class="mini-btn danger" id="photoRemove" data-t="f_photo_remove"></button>
+            </div>
+          </div>
+          <small class="field-hint" data-t="f_photo_hint"></small>
+        </div>
+        <div class="field"><label for="rDetails" data-t="f_details"></label><textarea id="rDetails" required maxlength="240" data-t-ph="f_details_ph"></textarea></div>
+        <div class="form-note" data-t="form_note"></div>
         <div class="form-buttons">
-          <button class="btn secondary" type="button" data-close>Cancel</button>
-          <button class="btn" type="submit">Post report</button>
+          <button class="btn secondary" type="button" data-close data-t="cancel"></button>
+          <button class="btn" type="submit" data-t="send"></button>
         </div>
       </div>
     </form>
   </dialog>
 
-  <button class="fab" type="button" id="reportFab">＋ Report flooding</button>
+  <button class="fab" type="button" id="reportFab" data-t="report_btn"></button>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <!-- Firebase SDKs -->
+  <script>
+    // ---------- language (BM / English) ----------
+    // Short, everyday wording on purpose: many readers are older residents.
+    const STR = {
+      ms: {
+        page_title: 'Amaran Banjir Puncak Alam',
+        brand: 'Amaran Banjir Puncak Alam',
+        lang_label: 'Bahasa',
+        eyebrow: 'Puncak Alam · laporan penduduk',
+        headline: 'Di mana banjir sekarang?',
+        lead: 'Lihat laporan banjir dan jalan dari penduduk. Nampak banjir? Laporkan di sini.',
+        report_btn: '＋ Lapor banjir',
+        notice: '<b>Jangan redah air banjir.</b> Tengok masa dan tempat laporan dulu. Kecemasan? Telefon <a href="tel:999">999</a>.',
+        notice_retention: 'Laporan dan gambar dipadam sendiri selepas 7 hari.',
+        map_title: 'Peta banjir',
+        map_sub: 'Laporan terkini dari penduduk',
+        live_label: 'Dari penduduk',
+        map_aria: 'Peta Puncak Alam',
+        map_caption: 'Tekan peta untuk pilih tempat',
+        hs_toggle: 'Tempat selalu banjir',
+        hs_hint: 'Tekan peta untuk pilih tempat laporan.',
+        hs_see: 'Lihat senarai',
+        hs_hide: 'Tutup senarai',
+        hs_days: '{n} hari',
+        hs_flooded_days: 'Banjir {n} hari',
+        hs_popup_note: 'Dari laporan penduduk, Apr 2025 – Nov 2026. Tempat anggaran.',
+        hs_source: 'Dari mesej banjir dalam group WhatsApp "UPDATE BANDAR PUNCAK ALAM", Apr 2025 – Nov 2026. "Hari" ialah berapa hari tempat itu dilapor banjir. Tempat adalah anggaran.',
+        filters_aria: 'Tapis laporan',
+        f_all: 'Semua', f_flood: 'Banjir', f_road: 'Jalan', f_weather: 'Hujan',
+        bottom_note: 'Kecemasan? Telefon',
+        sign_in: 'Log masuk', sign_out: 'Log keluar', signed_in: 'Dah log masuk.',
+        name_locked: 'Nama Google anda digunakan',
+        form_title: 'Lapor banjir atau jalan',
+        form_sub: 'Beritahu di mana dan apa yang anda nampak.',
+        close: 'Tutup',
+        f_area: 'Tempat atau jalan', f_area_ph: 'cth: Fasa 1, dekat lampu isyarat',
+        f_type: 'Jenis', type_flood: 'Banjir / air naik', type_road: 'Masalah jalan', type_weather: 'Hujan lebat',
+        f_status: 'Apa yang anda nampak?',
+        status_danger_opt: 'Banjir / air naik', status_uncertain_opt: 'Hati-hati / belum pasti', status_clear_opt: 'Dah surut / boleh lalu',
+        f_name: 'Nama (tak wajib)', f_name_ph: 'Nama anda',
+        f_spot: 'Tempat di peta (tak wajib)', f_spot_btn: '📍 Pilih di peta', spot_none: 'Belum pilih', spot_picked: 'Tempat dipilih ✓',
+        f_photo: 'Gambar (tak wajib)', f_photo_btn: '📷 Tambah gambar', f_photo_remove: 'Buang',
+        f_photo_hint: 'Elak gambar muka orang dan nombor plat kereta.',
+        f_details: 'Cerita sikit', f_details_ph: 'Paras air, tanda tempat, arah jalan…',
+        form_note: 'Masa laporan direkod sendiri.',
+        cancel: 'Batal', send: 'Hantar laporan', sending: 'Sedang hantar…',
+        tag_danger: 'Banjir', tag_uncertain: 'Belum pasti', tag_clear: 'Boleh lalu', tag_later_clear: 'Dah surut', tag_other: 'Laporan',
+        act_map: 'Lihat di peta', act_clear: 'Dah surut', act_remove: 'Padam',
+        by: 'oleh {who}', anon: 'Penduduk', approx: 'tempat anggaran', verified: 'Dihantar semasa log masuk', photo_alt: 'Gambar dari laporan',
+        age_now: 'baru tadi', age_min: '{n} minit lalu', age_hr: '{n} jam lalu', age_day: '{n} hari lalu',
+        empty: 'Tiada laporan dalam 24 jam lepas. Nampak banjir? Laporkan.',
+        older_show: 'Tunjuk {n} laporan lama', older_hide: 'Sorok laporan lama',
+        load_error: 'Tak dapat muat laporan. Semak internet dan <button type="button" class="link-btn" data-act="retry">cuba lagi</button>.',
+        map_error: 'Peta tak dapat dimuat. Laporan masih ada di bawah.',
+        t_pick: 'Tekan peta untuk pilih tempat.', t_picked: 'Tempat dipilih ✓',
+        t_posted: 'Laporan dihantar. Terima kasih!',
+        confirm_clear: 'Tandakan "{area}" dah surut?', t_cleared: 'Terima kasih! Ditanda dah surut.',
+        confirm_remove: 'Padam laporan "{area}"? Tak boleh batal.', t_removed: 'Laporan dipadam.',
+        t_network: 'Masalah internet. Cuba lagi.', t_failed: 'Tak berjaya. Cuba lagi.',
+        t_photo_wait: 'Sedang sediakan gambar…', t_photo_bad: 'Tak dapat guna gambar ni. Cuba gambar lain.',
+        err_rate: 'Terlalu banyak laporan. Tunggu beberapa minit.',
+        err_bounds: 'Tempat mesti dalam kawasan Puncak Alam.',
+        err_photo: 'Gambar ni tak boleh diguna. Cuba gambar lain.',
+        err_required: 'Isi tempat dan cerita dulu.',
+        err_sign_in: 'Log masuk dulu untuk padam.',
+        err_own: 'Anda hanya boleh padam laporan sendiri.',
+        si_in_app: 'Log masuk Google tak boleh dalam app ni. Buka laman ni dalam Chrome atau Safari.',
+        si_popup: 'Browser sekat tetingkap log masuk. Benarkan pop-up, kemudian cuba lagi.',
+        si_network: 'Masalah internet masa log masuk. Cuba lagi.',
+        si_storage: 'Browser sekat log masuk. Matikan mod peribadi (private), kemudian cuba lagi.',
+        si_other: 'Log masuk tak berjaya. Cuba lagi.',
+        footer_a: 'Dibina dengan ☕ dan sedikit hujan oleh',
+        footer_b: '🌧️',
+        footer_sub: 'Untuk jiran-jiran Puncak Alam. Jaga diri, jaga jiran.',
+      },
+      en: {
+        page_title: 'Puncak Alam Flood Alerts',
+        brand: 'Puncak Alam Flood Alerts',
+        lang_label: 'Language',
+        eyebrow: 'Puncak Alam · reports from residents',
+        headline: 'Where is it flooded now?',
+        lead: 'See flood and road reports from people nearby. Seen a flood? Report it here.',
+        report_btn: '＋ Report a flood',
+        notice: '<b>Never drive or walk through floodwater.</b> Check when and where a report was made. Emergency? Call <a href="tel:999">999</a>.',
+        notice_retention: 'Reports and photos are deleted automatically after 7 days.',
+        map_title: 'Flood map',
+        map_sub: 'Latest reports from residents',
+        live_label: 'From residents',
+        map_aria: 'Map of Puncak Alam',
+        map_caption: 'Tap the map to pick a spot',
+        hs_toggle: 'Places that often flood',
+        hs_hint: 'Tap the map to pick a spot for your report.',
+        hs_see: 'See list',
+        hs_hide: 'Hide list',
+        hs_days: '{n} days',
+        hs_flooded_days: 'Flooded on {n} days',
+        hs_popup_note: 'From residents’ reports, Apr 2025 – Nov 2026. Approximate spot.',
+        hs_source: 'From flood messages in the WhatsApp group "UPDATE BANDAR PUNCAK ALAM", Apr 2025 – Nov 2026. "Days" means how many days the spot was reported flooded. Spots are approximate.',
+        filters_aria: 'Filter reports',
+        f_all: 'All', f_flood: 'Flood', f_road: 'Roads', f_weather: 'Rain',
+        bottom_note: 'Emergency? Call',
+        sign_in: 'Sign in', sign_out: 'Sign out', signed_in: 'Signed in.',
+        name_locked: 'Your Google name is used',
+        form_title: 'Report a flood or road problem',
+        form_sub: 'Tell us where it is and what you see.',
+        close: 'Close',
+        f_area: 'Place or road', f_area_ph: 'e.g. Fasa 1, near the traffic lights',
+        f_type: 'Type', type_flood: 'Flood / water rising', type_road: 'Road problem', type_weather: 'Heavy rain',
+        f_status: 'What do you see?',
+        status_danger_opt: 'Flooded / water rising', status_uncertain_opt: 'Be careful / not sure', status_clear_opt: 'Clear / can pass',
+        f_name: 'Name (optional)', f_name_ph: 'Your name',
+        f_spot: 'Spot on the map (optional)', f_spot_btn: '📍 Pick on map', spot_none: 'Not picked yet', spot_picked: 'Spot picked ✓',
+        f_photo: 'Photo (optional)', f_photo_btn: '📷 Add photo', f_photo_remove: 'Remove',
+        f_photo_hint: 'Please avoid people’s faces and car number plates.',
+        f_details: 'A few details', f_details_ph: 'Water level, landmark, which direction…',
+        form_note: 'The time is added for you.',
+        cancel: 'Cancel', send: 'Send report', sending: 'Sending…',
+        tag_danger: 'Flooded', tag_uncertain: 'Not sure yet', tag_clear: 'Clear', tag_later_clear: 'Now clear', tag_other: 'Report',
+        act_map: 'Show on map', act_clear: 'Now clear', act_remove: 'Delete',
+        by: 'by {who}', anon: 'Community member', approx: 'approximate spot', verified: 'Posted while signed in', photo_alt: 'Photo from the report',
+        age_now: 'just now', age_min: '{n} min ago', age_hr: '{n} hr ago', age_day: '{n} days ago',
+        empty: 'No reports in the last 24 hours. Seen a flood? Report it.',
+        older_show: 'Show {n} older reports', older_hide: 'Hide older reports',
+        load_error: 'Couldn’t load reports. Check your internet and <button type="button" class="link-btn" data-act="retry">try again</button>.',
+        map_error: 'The map didn’t load. Reports are still listed below.',
+        t_pick: 'Tap the map to pick the spot.', t_picked: 'Spot picked ✓',
+        t_posted: 'Report sent. Thank you!',
+        confirm_clear: 'Mark "{area}" as clear now?', t_cleared: 'Thanks! Marked as clear.',
+        confirm_remove: 'Delete the report "{area}"? This can’t be undone.', t_removed: 'Report deleted.',
+        t_network: 'Internet problem. Please try again.', t_failed: 'That didn’t work. Please try again.',
+        t_photo_wait: 'Getting the photo ready…', t_photo_bad: 'Can’t use this photo. Please try another one.',
+        err_rate: 'Too many reports. Please wait a few minutes.',
+        err_bounds: 'The spot must be in the Puncak Alam area.',
+        err_photo: 'This photo can’t be used. Please try another one.',
+        err_required: 'Please fill in the place and details first.',
+        err_sign_in: 'Please sign in to delete.',
+        err_own: 'You can only delete your own reports.',
+        si_in_app: 'Google sign-in doesn’t work inside this app. Open this page in Chrome or Safari.',
+        si_popup: 'Your browser blocked the sign-in window. Allow pop-ups, then try again.',
+        si_network: 'Internet problem during sign-in. Please try again.',
+        si_storage: 'Your browser is blocking sign-in. Turn off private mode, then try again.',
+        si_other: 'Sign-in didn’t work. Please try again.',
+        footer_a: 'Built with ☕ and a bit of rain by',
+        footer_b: '🌧️',
+        footer_sub: 'For the neighbours of Puncak Alam. Stay safe, look out for each other.',
+      },
+    };
+    const LANG_KEY = 'pa-lang';
+    let lang = (() => { try { return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'ms'; } catch { return 'ms'; } })();
+    function t(key, vars = {}) {
+      const s = STR[lang][key] ?? STR.en[key] ?? key;
+      return s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+    }
+    window.t = t;
+    // Hotspot names/notes can be a plain string or { ms, en }.
+    const L = v => (v && typeof v === 'object') ? (v[lang] ?? v.en) : v;
+
+    // Server messages arrive in English; show them in the reader's language.
+    const SERVER_ERRORS = {
+      'Too many reports from this connection. Please wait a few minutes.': 'err_rate',
+      'Map point must be in the Puncak Alam area.': 'err_bounds',
+      'Photo must be a JPEG under 500 KB. Please try another photo.': 'err_photo',
+      'Area is required.': 'err_required',
+      'Details are required.': 'err_required',
+      'Sign in to remove reports.': 'err_sign_in',
+      'You can only remove your own reports.': 'err_own',
+    };
+
+    function applyStaticText() {
+      document.documentElement.lang = lang === 'ms' ? 'ms' : 'en';
+      document.title = t('page_title');
+      document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
+      document.querySelectorAll('[data-t-html]').forEach(el => { el.innerHTML = t(el.dataset.tHtml); }); // trusted strings from STR only
+      document.querySelectorAll('[data-t-ph]').forEach(el => { el.placeholder = t(el.dataset.tPh); });
+      document.querySelectorAll('[data-t-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.tAria)); });
+      document.querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+    }
+    function setLang(next) {
+      lang = next === 'en' ? 'en' : 'ms';
+      try { localStorage.setItem(LANG_KEY, lang); } catch {}
+      applyStaticText();
+      window._onLangChange?.();
+    }
+    applyStaticText();
+  </script>
+
+  <!-- Firebase sign-in -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    const auth = getAuth(initializeApp(firebaseConfig));
     const provider = new GoogleAuthProvider();
-
     window._getIdToken = async () => auth.currentUser ? await auth.currentUser.getIdToken() : null;
 
     const authContainer = document.getElementById('authContainer');
@@ -302,40 +534,34 @@
 
     // Google refuses sign-in inside app web views (WhatsApp, Facebook, Instagram, etc.).
     const IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|TikTok|Snapchat|Twitter|; wv\)/i.test(navigator.userAgent);
-
     const SIGN_IN_ERRORS = {
-      'auth/popup-blocked': 'Your browser blocked the sign-in window. Allow pop-ups for this site, then try again.',
-      'auth/operation-not-supported-in-this-environment': 'Sign-in isn’t supported here. Open this page in Chrome or Safari.',
-      'auth/unauthorized-domain': 'Sign-in isn’t enabled for this web address yet.',
-      'auth/network-request-failed': 'Network problem during sign-in. Check your connection and try again.',
-      'auth/too-many-requests': 'Too many sign-in attempts. Please wait a minute and try again.',
-      'auth/web-storage-unsupported': 'Your browser is blocking storage needed for sign-in. Turn off private mode or allow cookies, then try again.',
-      'auth/internal-error': 'Google sign-in had a problem. Open this page in Chrome or Safari and try again.',
+      'auth/popup-blocked': 'si_popup',
+      'auth/operation-not-supported-in-this-environment': 'si_in_app',
+      'auth/network-request-failed': 'si_network',
+      'auth/web-storage-unsupported': 'si_storage',
+      'auth/internal-error': 'si_in_app',
     };
 
     async function signIn() {
-      if (IN_APP_BROWSER) {
-        window._showToast('Google sign-in doesn’t work inside this app. Open the page in Chrome or Safari (⋮ or share menu → Open in browser).', 7000);
-        return;
-      }
+      if (IN_APP_BROWSER) return window._showToast(t('si_in_app'), 7000);
       try {
         await signInWithPopup(auth, provider);
-        window._showToast('Signed in.');
+        window._showToast(t('signed_in'));
       } catch (err) {
         if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') return;
         console.error('Sign-in error:', err);
-        const message = SIGN_IN_ERRORS[err?.code] || `Sign-in failed (${err?.code || 'unknown error'}). Please try again.`;
-        window._showToast(message, 7000);
+        window._showToast(t(SIGN_IN_ERRORS[err?.code] || 'si_other'), 7000);
       }
     }
 
-    // Build the header with DOM nodes (not innerHTML) so a display name can never inject markup.
-    function renderAuth(user) {
+    // Built with DOM nodes (not innerHTML) so a display name can never inject markup.
+    function renderAuth() {
+      const user = auth.currentUser;
       authContainer.replaceChildren();
       if (!user) {
         const btn = document.createElement('button');
         btn.className = 'auth-btn';
-        btn.textContent = 'Sign in with Google';
+        btn.textContent = t('sign_in');
         btn.onclick = signIn;
         authContainer.append(btn);
         return;
@@ -344,9 +570,7 @@
       wrap.className = 'auth-user';
       if (user.photoURL) {
         const img = document.createElement('img');
-        img.src = user.photoURL;
-        img.alt = '';
-        img.referrerPolicy = 'no-referrer';
+        img.src = user.photoURL; img.alt = ''; img.referrerPolicy = 'no-referrer';
         img.onerror = () => img.remove();
         wrap.append(img);
       }
@@ -354,19 +578,21 @@
       name.textContent = user.displayName || user.email;
       const out = document.createElement('button');
       out.className = 'auth-btn signout';
-      out.textContent = 'Sign out';
+      out.textContent = t('sign_out');
       out.onclick = () => signOut(auth);
       wrap.append(name, out);
       authContainer.append(wrap);
     }
+    window._renderAuth = renderAuth;
+    renderAuth();
 
     onAuthStateChanged(auth, (user) => {
-      renderAuth(user);
-      // Signed-in reports are always posted under the Google name, so lock the field to match.
+      renderAuth();
+      // Signed-in reports always use the Google name, so lock the field to match.
       if (user) {
         rNameInput.value = user.displayName || user.email.split('@')[0];
         rNameInput.disabled = true;
-        rNameInput.title = 'Signed-in reports use your Google name';
+        rNameInput.title = t('name_locked');
       } else {
         rNameInput.value = '';
         rNameInput.disabled = false;
@@ -387,13 +613,18 @@
     let reports=[], currentFilter='all', showOlder=false, loadError=false;
     let me={signedIn:false};
     let mapInstance=null, reportMarkers=new Map(), draftMarker=null, selectedCoordinates=null, waitingForPin=false;
+    let pendingPhoto=null; // { thumb, full } JPEG data URLs, ready to upload
 
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    function toast(message,duration=3200){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),duration)}
+    function toast(message,duration=3200){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.classList.remove('show'),duration)}
     window._showToast=toast;
 
     const ageMs=r=>Date.now()-new Date(r.time).getTime();
-    function ageLabel(iso){const mins=Math.max(0,Math.floor((Date.now()-new Date(iso).getTime())/60000));if(mins<1)return 'just now';if(mins<60)return `${mins} min ago`;const h=Math.floor(mins/60);if(h<24)return `${h} hr${h===1?'':'s'} ago`;const d=Math.floor(h/24);return `${d} day${d===1?'':'s'} ago`;}
+    function ageLabel(iso){const mins=Math.max(0,Math.floor((Date.now()-new Date(iso).getTime())/60000));if(mins<1)return t('age_now');if(mins<60)return t('age_min',{n:mins});const h=Math.floor(mins/60);if(h<24)return t('age_hr',{n:h});return t('age_day',{n:Math.floor(h/24)});}
+    const fmtTime=iso=>new Date(iso).toLocaleString(lang==='ms'?'ms-MY':'en-MY',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+    // The server's default poster name is English; show it in the reader's language.
+    const whoName=r=>(!r.who||r.who==='Community member')?t('anon'):r.who;
+    const photoUrl=(id,full)=>`/api/reports/${encodeURIComponent(id)}/photo${full?'?size=full':''}`;
 
     async function authHeaders(json){
       const h=json?{'Content-Type':'application/json'}:{};
@@ -401,9 +632,10 @@
       if(token)h['Authorization']=`Bearer ${token}`;
       return h;
     }
-    async function errorMessage(res,fallback){
-      try{const body=await res.json();if(body?.error)return body.error}catch{}
-      return fallback;
+    async function errorMessage(res){
+      if(res.status===413)return t('err_photo'); // upload bigger than the server accepts
+      try{const body=await res.json();if(body?.error)return t(SERVER_ERRORS[body.error]||'t_failed')}catch{}
+      return t('t_failed');
     }
 
     // ----- data -----
@@ -446,39 +678,42 @@
     }
     const hiddenOlderCount=()=>reports.filter(r=>(currentFilter==='all'||r.type===currentFilter)&&ageMs(r)>HIDE_AFTER).length;
 
-    // ----- map -----
+    // ----- flood-prone hotspots -----
 
-    // Flood-prone spots from the "UPDATE BANDAR PUNCAK ALAM" WhatsApp group (Apr 2025 – Nov 2026):
+    // From the "UPDATE BANDAR PUNCAK ALAM" WhatsApp group (Apr 2025 – Nov 2026):
     // days = number of separate days with flood messages about the spot. Locations are approximate.
+    const NOTE_REPEATED={ms:'Banyak kali dilapor banjir.',en:'Reported flooded many times.'};
+    const NOTE_NOV_LIST={ms:'Dalam senarai tempat banjir Nov 2026.',en:'On the Nov 2026 list of flooded spots.'};
     const FLOOD_HOTSPOTS=[
-      {name:'Avatar (Jalan Bukit Cerakah)',lat:3.24649,lng:101.47193,days:27,note:'Most often reported. Cars reported submerged; usually floods after Paya Jaras and Sg Buloh.'},
-      {name:'Depan Proton',lat:3.24086,lng:101.44138,days:14,note:'Water rises here often; sometimes still passable.'},
-      {name:'Alam Suria / Simpang 4',lat:3.23543,lng:101.40706,days:12,note:'Knee-deep water reported.'},
-      {name:'LATAR Puncak Alam exit',lat:3.27346,lng:101.45929,days:11,note:'Flooding at the slip roads in and out of LATAR.'},
-      {name:'Daunan roundabout',lat:3.26205,lng:101.45191,days:10,note:'River overflows toward Ijok.'},
-      {name:'Paya Jaras (pasar malam)',lat:3.1997,lng:101.54617,days:9,note:'Floods early: a warning sign that Avatar may flood next.'},
-      {name:'Alam Jaya',lat:3.25373,lng:101.44533,days:9,note:'Repeated flood reports.'},
-      {name:'Alam Budiman',lat:3.14262,lng:101.47938,days:9,note:'Route out to Shah Alam; floods and jams together.'},
-      {name:'Kg Bukit Hijau (under LATAR)',lat:3.25604,lng:101.38092,days:8,note:'Low road under the highway.'},
-      {name:'Hillpark',lat:3.21458,lng:101.45654,days:7,note:'Repeated flood reports.'},
-      {name:'Persiaran Mokhtar Dahari',lat:3.22319,lng:101.45622,days:7,note:'Main road out; watch the Eco Grandeur stretch.'},
-      {name:'Alam Perdana',lat:3.25542,lng:101.45731,days:7,note:'Repeated flood reports.'},
-      {name:'Depan McD (Eco Grandeur)',lat:3.2217,lng:101.44787,days:6,note:'On the Nov 2026 list of flood spots.'},
-      {name:'Parit Mahang',lat:3.30856,lng:101.37849,days:6,note:'Deep water (knee-height) reported.'},
-      {name:'Eco Grandeur',lat:3.22413,lng:101.46826,days:5,note:'Repeated flood reports.'},
-      {name:'Ijok – Caledonia',lat:3.29458,lng:101.43576,days:1,note:'On the Nov 2026 list of flood spots.'},
+      {name:'Avatar (Jalan Bukit Cerakah)',lat:3.24649,lng:101.47193,days:27,note:{ms:'Paling kerap banjir. Ada kereta tenggelam. Biasanya banjir lepas Paya Jaras dan Sg Buloh.',en:'Floods most often. Cars have been submerged. Usually floods after Paya Jaras and Sg Buloh.'}},
+      {name:'Depan Proton',lat:3.24086,lng:101.44138,days:14,note:{ms:'Air selalu naik di sini. Kadang-kadang masih boleh lalu.',en:'Water often rises here. Sometimes you can still pass.'}},
+      {name:'Alam Suria / Simpang 4',lat:3.23543,lng:101.40706,days:12,note:{ms:'Pernah air paras lutut.',en:'Water has reached knee height.'}},
+      {name:{ms:'Keluar LATAR Puncak Alam',en:'LATAR Puncak Alam exit'},lat:3.27346,lng:101.45929,days:11,note:{ms:'Banjir di jalan masuk dan keluar LATAR.',en:'Floods on the roads into and out of LATAR.'}},
+      {name:{ms:'Bulatan Daunan',en:'Daunan roundabout'},lat:3.26205,lng:101.45191,days:10,note:{ms:'Sungai melimpah ke arah Ijok.',en:'The river overflows toward Ijok.'}},
+      {name:{ms:'Paya Jaras (pasar malam)',en:'Paya Jaras (night market)'},lat:3.1997,lng:101.54617,days:9,note:{ms:'Banjir awal. Tanda Avatar mungkin banjir selepas ini.',en:'Floods early: a sign Avatar may flood next.'}},
+      {name:'Alam Jaya',lat:3.25373,lng:101.44533,days:9,note:NOTE_REPEATED},
+      {name:'Alam Budiman',lat:3.14262,lng:101.47938,days:9,note:{ms:'Jalan keluar ke Shah Alam. Banjir dan jem.',en:'Route out to Shah Alam. Floods and traffic jams.'}},
+      {name:{ms:'Kg Bukit Hijau (bawah LATAR)',en:'Kg Bukit Hijau (under LATAR)'},lat:3.25604,lng:101.38092,days:8,note:{ms:'Jalan rendah bawah lebuh raya.',en:'Low road under the highway.'}},
+      {name:'Hillpark',lat:3.21458,lng:101.45654,days:7,note:NOTE_REPEATED},
+      {name:'Persiaran Mokhtar Dahari',lat:3.22319,lng:101.45622,days:7,note:{ms:'Jalan utama keluar. Hati-hati dekat Eco Grandeur.',en:'Main road out. Take care near Eco Grandeur.'}},
+      {name:'Alam Perdana',lat:3.25542,lng:101.45731,days:7,note:NOTE_REPEATED},
+      {name:'Depan McD (Eco Grandeur)',lat:3.2217,lng:101.44787,days:6,note:NOTE_NOV_LIST},
+      {name:'Parit Mahang',lat:3.30856,lng:101.37849,days:6,note:{ms:'Pernah air paras lutut.',en:'Water has reached knee height.'}},
+      {name:'Eco Grandeur',lat:3.22413,lng:101.46826,days:5,note:NOTE_REPEATED},
+      {name:'Ijok – Caledonia',lat:3.29458,lng:101.43576,days:1,note:NOTE_NOV_LIST},
     ];
     const HS_KEY='pa-show-hotspots';
-    let hsPopup=null;
+    let hsPopup=null, hsPopupSpot=null;
     function readPref(){try{return localStorage.getItem(HS_KEY)!=='0'}catch{return true}}
     function writePref(v){try{localStorage.setItem(HS_KEY,v?'1':'0')}catch{}}
 
     function hotspotPopupHtml(h){
-      return `<div class="hs-popup"><b>${esc(h.name)}</b><span class="hs-days">Flooded on ${h.days} day${h.days===1?'':'s'}</span><div>${esc(h.note)}</div><small>Known flood-prone spot from community reports, Apr 2025 – Nov 2026. Approximate location.</small></div>`;
+      return `<div class="hs-popup"><b>${esc(L(h.name))}</b><span class="hs-days">${esc(t('hs_flooded_days',{n:h.days}))}</span><div>${esc(L(h.note))}</div><small>${esc(t('hs_popup_note'))}</small></div>`;
     }
     function showHotspotPopup(h){
       if(!mapInstance)return;
       hsPopup?.remove();
+      hsPopupSpot=h;
       hsPopup=new maplibregl.Popup({offset:12,closeButton:false,maxWidth:'240px'}).setLngLat([h.lng,h.lat]).setHTML(hotspotPopupHtml(h)).addTo(mapInstance);
     }
 
@@ -512,10 +747,13 @@
       const max=Math.max(...FLOOD_HOTSPOTS.map(h=>h.days));
       document.getElementById('hsList').innerHTML=[...FLOOD_HOTSPOTS].sort((a,b)=>b.days-a.days).map(h=>{
         const i=FLOOD_HOTSPOTS.indexOf(h);
-        return `<button type="button" class="hs-item" data-hs="${i}"><b>${esc(h.name)}</b><span class="hs-days">${h.days} day${h.days===1?'':'s'}</span><span class="hs-bar"><i style="width:${Math.round(h.days/max*100)}%"></i></span><small>${esc(h.note)}</small></button>`;
-      }).join('')+'<p class="hs-source">From flood messages in the community WhatsApp group "UPDATE BANDAR PUNCAK ALAM", Apr 2025 – Nov 2026. "Days" counts separate days the spot was reported flooded. Locations are approximate.</p>';
+        return `<button type="button" class="hs-item" data-hs="${i}"><b>${esc(L(h.name))}</b><span class="hs-days">${esc(t('hs_days',{n:h.days}))}</span><span class="hs-bar"><i style="width:${Math.round(h.days/max*100)}%"></i></span><small>${esc(L(h.note))}</small></button>`;
+      }).join('')+`<p class="hs-source">${esc(t('hs_source'))}</p>`;
+      const list=document.getElementById('hsList');
+      document.getElementById('hsListBtn').textContent=list.hidden?t('hs_see'):t('hs_hide');
     }
 
+    // ----- report pins -----
 
     function reportCoords(r){if(r.lat!=null&&r.lng!=null)return [r.lat,r.lng];const a=(r.area||'').toLowerCase();if(a.includes('hillpark'))return [3.211,101.462];if(a.includes('suria')||a.includes('jeram'))return [3.241,101.413];if(a.includes('avatar'))return [3.222,101.447];return [3.212,101.434];}
 
@@ -529,7 +767,8 @@
       reportMarkers.forEach(m=>m.remove());reportMarkers.clear();
       list.filter(r=>!supersededBy(r)).forEach(r=>{
         const [lat,lng]=reportCoords(r);
-        const popup=`<b>${esc(r.area)}</b><br/>${esc(new Date(r.time).toLocaleString())} · ${esc(ageLabel(r.time))}<br/>${esc(r.details)}<br/><small>by ${esc(r.who)}${r.lat==null?' · approximate area':''}</small>`;
+        const img=r.hasPhoto?`<a href="${photoUrl(r.id,true)}" target="_blank" rel="noopener"><img class="popup-photo" src="${photoUrl(r.id)}" alt="${esc(t('photo_alt'))}" loading="lazy"></a>`:'';
+        const popup=`${img}<b>${esc(r.area)}</b><br/>${esc(fmtTime(r.time))} · ${esc(ageLabel(r.time))}<br/>${esc(r.details)}<br/><small>${esc(t('by',{who:whoName(r)}))}${r.lat==null?' · '+esc(t('approx')):''}</small>`;
         const m=new maplibregl.Marker({element:pinElement(r.status,ageMs(r)>FADE_AFTER),anchor:'bottom'})
           .setLngLat([lng,lat])
           .setPopup(new maplibregl.Popup({offset:34,closeButton:false}).setHTML(popup))
@@ -547,20 +786,24 @@
       const m=reportMarkers.get(id);if(m&&!m.getPopup().isOpen())m.togglePopup();
     }
 
+    function renderPinStatus(){
+      const el=document.getElementById('pinStatus');
+      el.textContent=selectedCoordinates?t('spot_picked'):t('spot_none');
+      el.classList.toggle('picked',!!selectedCoordinates);
+    }
     function setSelectedPoint(lat,lng){
       selectedCoordinates=[Number(lat.toFixed(6)),Number(lng.toFixed(6))];
       if(draftMarker)draftMarker.remove();
       draftMarker=new maplibregl.Marker({element:pinElement('uncertain',false),anchor:'bottom'})
         .setLngLat([selectedCoordinates[1],selectedCoordinates[0]])
         .addTo(mapInstance);
-      document.getElementById('pinStatus').textContent=`Map point selected · ${selectedCoordinates[0].toFixed(4)}, ${selectedCoordinates[1].toFixed(4)}`;
-      document.getElementById('pinStatus').style.color='#28694f';
+      renderPinStatus();
     }
 
     function initMap(){
       const el=document.getElementById('map');
       if(!window.maplibregl){
-        el.insertAdjacentHTML('afterbegin','<div class="map-error">Map library did not load. Reports are still listed below.</div>');
+        el.insertAdjacentHTML('afterbegin',`<div class="map-error">${esc(t('map_error'))}</div>`);
         return;
       }
       mapInstance=new maplibregl.Map({container:el,style:MAP_STYLE,center:[101.438,3.222],zoom:11.5,cooperativeGestures:true});
@@ -574,7 +817,7 @@
         const hs=!waitingForPin&&hotspotAt(e.point);
         if(hs){showHotspotPopup(hs);return}
         setSelectedPoint(e.lngLat.lat,e.lngLat.lng);
-        if(waitingForPin){waitingForPin=false;openDialog('reportDialog');toast('Map point added to your report.')}
+        if(waitingForPin){waitingForPin=false;openDialog('reportDialog');toast(t('t_picked'))}
       });
     }
 
@@ -584,53 +827,49 @@
       const feed=document.getElementById('feed');
       const list=visibleReports();
       const older=hiddenOlderCount();
-      const statusName={danger:'Flood reported',clear:'Clear · at report time',uncertain:'Needs confirmation'};
+      const tagKey={danger:'tag_danger',clear:'tag_clear',uncertain:'tag_uncertain'};
 
       let html='';
-      if(loadError){
-        html+='<div class="feed-error" role="alert">Couldn’t load reports. Check your connection and <button type="button" class="link-btn" data-act="retry">try again</button>.</div>';
-      }
+      if(loadError)html+=`<div class="feed-error" role="alert">${t('load_error')}</div>`; // trusted string from STR
       html+=list.map(r=>{
         const later=supersededBy(r);
         const faded=ageMs(r)>FADE_AFTER||!!later;
-        const tag=later?'<span class="report-tag clear">Later reported clear</span>':`<span class="report-tag ${esc(r.status)}">${statusName[r.status]||'Community update'}</span>`;
-        const actions=[`<button class="mini-btn" type="button" data-act="focus" data-id="${esc(r.id)}">Show on map</button>`];
-        if(r.status!=='clear'&&!later&&r.type!=='weather')actions.push(`<button class="mini-btn good" type="button" data-act="clear" data-id="${esc(r.id)}">Now clear</button>`);
-        if(canRemove(r))actions.push(`<button class="mini-btn danger" type="button" data-act="remove" data-id="${esc(r.id)}">Remove</button>`);
-        return `<article class="report${faded?' faded':''}"><span class="report-dot ${esc(r.status)}"></span><div><div class="report-title">${esc(r.area)}</div><div class="report-meta">${esc(new Date(r.time).toLocaleString())} · ${esc(ageLabel(r.time))} · by ${esc(r.who)}${r.userId!=null?' <span class="verified" title="Posted while signed in">✓</span>':''}</div><p>${esc(r.details)}</p><div class="report-actions">${actions.join('')}</div></div>${tag}</article>`;
+        const tag=later?`<span class="report-tag clear">${esc(t('tag_later_clear'))}</span>`:`<span class="report-tag ${esc(r.status)}">${esc(t(tagKey[r.status]||'tag_other'))}</span>`;
+        const actions=[`<button class="mini-btn" type="button" data-act="focus" data-id="${esc(r.id)}">${esc(t('act_map'))}</button>`];
+        if(r.status!=='clear'&&!later&&r.type!=='weather')actions.push(`<button class="mini-btn good" type="button" data-act="clear" data-id="${esc(r.id)}">${esc(t('act_clear'))}</button>`);
+        if(canRemove(r))actions.push(`<button class="mini-btn danger" type="button" data-act="remove" data-id="${esc(r.id)}">${esc(t('act_remove'))}</button>`);
+        const photo=r.hasPhoto?`<a class="report-photo" href="${photoUrl(r.id,true)}" target="_blank" rel="noopener"><img src="${photoUrl(r.id)}" alt="${esc(t('photo_alt'))}" loading="lazy"></a>`:'';
+        const verified=r.userId!=null?` <span class="verified" title="${esc(t('verified'))}">✓</span>`:'';
+        return `<article class="report${faded?' faded':''}"><span class="report-dot ${esc(r.status)}"></span><div><div class="report-title">${esc(r.area)}</div><div class="report-meta">${esc(fmtTime(r.time))} · ${esc(ageLabel(r.time))} · ${esc(t('by',{who:whoName(r)}))}${verified}</div><p>${esc(r.details)}</p>${photo}<div class="report-actions">${actions.join('')}</div></div>${tag}</article>`;
       }).join('');
-      if(!list.length&&!loadError){
-        html+=`<div class="empty">No reports in the last 24 hours${currentFilter==='all'?'':' for this filter'}. Share a location and time if you have a current update.</div>`;
-      }
-      if(older){
-        html+=`<button type="button" class="older-toggle" data-act="older">${showOlder?'Hide reports older than 24 hours':`Show ${older} older report${older===1?'':'s'}`}</button>`;
-      }
+      if(!list.length&&!loadError)html+=`<div class="empty">${esc(t('empty'))}</div>`;
+      if(older)html+=`<button type="button" class="older-toggle" data-act="older">${esc(showOlder?t('older_hide'):t('older_show',{n:older}))}</button>`;
       feed.innerHTML=html;
       renderMapMarkers(list);
     }
 
     async function markClear(id){
       const r=reports.find(x=>x.id===id);if(!r)return;
-      if(!confirm(`Report "${r.area}" as clear now?`))return;
+      if(!confirm(t('confirm_clear',{area:r.area})))return;
       try{
         const res=await fetch(`/api/reports/${id}/clear`,{method:'POST',headers:await authHeaders(true),body:JSON.stringify({who:document.getElementById('rName').value.trim()})});
-        if(!res.ok){toast(await errorMessage(res,'Couldn’t update that report.'));return}
+        if(!res.ok){toast(await errorMessage(res));return}
         reports.unshift(await res.json());
         renderReports();
-        toast('Thanks — marked as clear.');
-      }catch{toast('Network error. Please try again.')}
+        toast(t('t_cleared'));
+      }catch{toast(t('t_network'))}
     }
 
     async function removeReport(id){
       const r=reports.find(x=>x.id===id);if(!r)return;
-      if(!confirm(`Remove the report "${r.area}"? This can’t be undone.`))return;
+      if(!confirm(t('confirm_remove',{area:r.area})))return;
       try{
         const res=await fetch(`/api/reports/${id}`,{method:'DELETE',headers:await authHeaders()});
-        if(!res.ok){toast(await errorMessage(res,'Couldn’t remove that report.'));return}
+        if(!res.ok){toast(await errorMessage(res));return}
         reports=reports.filter(x=>x.id!==id);
         renderReports();
-        toast('Report removed.');
-      }catch{toast('Network error. Please try again.')}
+        toast(t('t_removed'));
+      }catch{toast(t('t_network'))}
     }
 
     document.getElementById('feed').addEventListener('click',e=>{
@@ -638,6 +877,56 @@
       const id=Number(b.dataset.id);
       ({focus:()=>focusReport(id),clear:()=>markClear(id),remove:()=>removeReport(id),retry:fetchReports,older:()=>{showOlder=!showOlder;renderReports()}})[b.dataset.act]?.();
     });
+
+    // ----- photo: shrink on the phone before upload (also drops location data) -----
+
+    async function loadImage(file){
+      try{ return await createImageBitmap(file,{imageOrientation:'from-image'}); }
+      catch{
+        return await new Promise((resolve,reject)=>{
+          const url=URL.createObjectURL(file);const img=new Image();
+          img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};
+          img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('decode failed'))};
+          img.src=url;
+        });
+      }
+    }
+    function toJpeg(img,maxSide,quality){
+      const w=img.width||img.naturalWidth,h=img.height||img.naturalHeight;
+      const scale=Math.min(1,maxSide/Math.max(w,h));
+      const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));
+      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);
+      return c.toDataURL('image/jpeg',quality);
+    }
+    const dataUrlBytes=d=>Math.floor((d.length-d.indexOf(',')-1)*3/4);
+    async function compressPhoto(file){
+      const img=await loadImage(file);
+      let full='';
+      for(const [side,q] of [[1280,.72],[1024,.65],[800,.6]]){full=toJpeg(img,side,q);if(dataUrlBytes(full)<=450*1024)break}
+      const thumb=toJpeg(img,360,.68);
+      img.close?.();
+      if(dataUrlBytes(full)>450*1024||dataUrlBytes(thumb)>75*1024)throw new Error('too large');
+      return {full,thumb};
+    }
+    function clearPhoto(){
+      pendingPhoto=null;
+      document.getElementById('rPhoto').value='';
+      document.getElementById('photoPreview').hidden=true;
+      document.getElementById('photoImg').removeAttribute('src');
+    }
+    document.getElementById('rPhoto').addEventListener('change',async e=>{
+      const file=e.target.files?.[0];if(!file)return;
+      const submit=document.querySelector('#reportForm [type=submit]');
+      submit.disabled=true;toast(t('t_photo_wait'));
+      try{
+        pendingPhoto=await compressPhoto(file);
+        document.getElementById('photoImg').src=pendingPhoto.thumb;
+        document.getElementById('photoPreview').hidden=false;
+      }catch(err){
+        console.warn('Photo error:',err);clearPhoto();toast(t('t_photo_bad'),5000);
+      }finally{submit.disabled=false}
+    });
+    document.getElementById('photoRemove').onclick=clearPhoto;
 
     // ----- dialog and form -----
 
@@ -648,11 +937,10 @@
     document.getElementById('reportFab').onclick=()=>openDialog('reportDialog');
     document.getElementById('hsToggle').checked=readPref();
     document.getElementById('hsToggle').onchange=e=>setHotspotsVisible(e.target.checked);
-    renderHotspotList();
     document.getElementById('hsListBtn').onclick=e=>{
       const list=document.getElementById('hsList');list.hidden=!list.hidden;
       e.currentTarget.setAttribute('aria-expanded',String(!list.hidden));
-      e.currentTarget.textContent=list.hidden?'See list':'Hide list';
+      e.currentTarget.textContent=list.hidden?t('hs_see'):t('hs_hide');
     };
     document.getElementById('hsList').addEventListener('click',e=>{
       const b=e.target.closest('[data-hs]');if(!b||!mapInstance)return;
@@ -663,7 +951,7 @@
       mapInstance.once('moveend',()=>showHotspotPopup(h));
     });
     document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeDialog);
-    document.getElementById('choosePin').onclick=()=>{closeDialog();waitingForPin=true;toast('Tap the map to select the report location.');document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'})};
+    document.getElementById('choosePin').onclick=()=>{closeDialog();waitingForPin=true;toast(t('t_pick'));document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'})};
     document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x===b));renderReports()});
 
     document.getElementById('reportForm').onsubmit=async e=>{
@@ -677,34 +965,46 @@
         details:document.getElementById('rDetails').value.trim(),
         who:nameInput.value.trim(),
         lat:selectedCoordinates?selectedCoordinates[0]:null,
-        lng:selectedCoordinates?selectedCoordinates[1]:null
+        lng:selectedCoordinates?selectedCoordinates[1]:null,
+        photo:pendingPhoto
       };
-      submit.disabled=true;
+      submit.disabled=true;submit.textContent=t('sending');
       try{
         const res=await fetch('/api/reports',{method:'POST',headers:await authHeaders(true),body:JSON.stringify(payload)});
-        if(!res.ok){toast(await errorMessage(res,'Couldn’t post your report. Please try again.'));return}
+        if(!res.ok){toast(await errorMessage(res),5000);return}
         reports.unshift(await res.json());
         selectedCoordinates=null;
         if(draftMarker){draftMarker.remove();draftMarker=null}
         const keepName=nameInput.disabled?nameInput.value:'';
         e.target.reset();
         nameInput.value=keepName;
-        document.getElementById('pinStatus').textContent='No pin selected';
-        document.getElementById('pinStatus').style.color='';
+        clearPhoto();
+        renderPinStatus();
         closeDialog();
         renderReports();
-        toast('Report posted.');
+        toast(t('t_posted'));
         document.getElementById('feed').scrollIntoView({behavior:'smooth',block:'start'});
       }catch(err){
         console.error('Error submitting report:',err);
-        toast('Network error. Please try again.');
+        toast(t('t_network'));
       }finally{
-        submit.disabled=false;
+        submit.disabled=false;submit.textContent=t('send');
       }
     };
 
     document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
 
+    // ----- language switch -----
+    document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+    window._onLangChange=()=>{
+      renderHotspotList();renderReports();renderPinStatus();
+      if(hsPopup?.isOpen()&&hsPopupSpot)hsPopup.setHTML(hotspotPopupHtml(hsPopupSpot));
+      window._renderAuth?.();
+      const name=document.getElementById('rName');if(name.disabled)name.title=t('name_locked');
+    };
+
+    renderHotspotList();
+    renderPinStatus();
     initMap();
     fetchReports();
     // Keep the board current; skip while the tab is hidden.

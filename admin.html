@@ -69,6 +69,7 @@
     .pill.clear{background:#e8f5ed;color:#327451}
     .pill.type{background:#eef2ee;color:#4d6660}
     .row-actions{display:flex;gap:5px;white-space:nowrap}
+    img.thumb{display:block;margin-top:6px;width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)}
     .empty{padding:28px;text-align:center;color:var(--muted);font-size:13px}
     .error{padding:13px 14px;background:var(--redbg);color:#8d3a31;font-size:12px}
     .maint{padding:18px;display:grid;gap:18px}
@@ -284,7 +285,7 @@
     async function loadHealth() {
       try { health = (await api('/api/admin/health')).db; }
       catch (err) { health = { ok: false, error: err.message }; }
-      $('dbSummary').textContent = health.ok ? `Connected · ${health.ms} ms · ${health.reports} reports stored` : 'Not connected';
+      $('dbSummary').textContent = health.ok ? `Connected · ${health.ms} ms · ${health.reports} reports · ${health.photos} photos · ${health.sizeMB} MB of 1024 MB used · auto-clear after ${health.retentionDays} days` : 'Not connected';
       $('dbError').hidden = health.ok;
       $('dbError').textContent = health.ok ? '' : health.error || 'Unknown error';
       renderCards();
@@ -322,7 +323,7 @@
       const activeFloods = day.filter(r => r.status === 'danger').length;
       const signedIn = reports.filter(r => r.userId != null).length;
       const db = !health ? { cls: '', value: '…', note: 'Checking' }
-        : health.ok ? { cls: 'good', value: 'OK', note: `${health.ms} ms` }
+        : health.ok ? { cls: 'good', value: 'OK', note: `${health.sizeMB} MB used · ${health.photos} photos` }
         : { cls: 'bad', value: 'Down', note: 'See Maintenance' };
       const cards = [
         { label: 'Database', value: db.value, note: db.note, cls: db.cls },
@@ -355,7 +356,7 @@
         <tr class="${selected.has(r.id) ? 'selected' : ''}">
           <td class="check"><input type="checkbox" data-select="${r.id}" ${selected.has(r.id) ? 'checked' : ''} aria-label="Select report" /></td>
           <td class="meta">${esc(fmtTime(r.time))}<br/>${esc(ago(r.time))}</td>
-          <td><div class="area">${esc(r.area)}</div><div class="details">${esc(r.details)}</div></td>
+          <td><div class="area">${esc(r.area)}</div><div class="details">${esc(r.details)}</div>${r.hasPhoto ? `<a href="/api/reports/${r.id}/photo?size=full" target="_blank" rel="noopener"><img class="thumb" src="/api/reports/${r.id}/photo" alt="Report photo" loading="lazy" /></a>` : ''}</td>
           <td><span class="pill type">${esc(r.type)}</span> <span class="pill ${esc(r.status)}">${esc(STATUS_LABEL[r.status] || r.status)}</span></td>
           <td>${esc(r.who || '—')}${r.authorEmail ? `<div class="meta">${esc(r.authorEmail)}</div>` : '<div class="meta">not signed in</div>'}</td>
           <td><div class="row-actions"><button class="btn secondary small" type="button" data-edit="${r.id}">Edit</button><button class="btn danger small" type="button" data-delete="${r.id}">Delete</button></div></td>
