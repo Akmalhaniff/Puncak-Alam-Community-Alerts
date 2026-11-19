@@ -162,6 +162,9 @@
     .donate-body p{font-size:13px;color:#52615d;margin:0 0 14px}
     .donate-qr{display:block;width:min(340px,86vw);height:auto;margin:0 auto 6px;border-radius:14px;border:1px solid var(--line);background:#fff;padding:6px}
     .donate-zoom{display:block;font-size:11px;color:#7d8984;margin:0 0 12px}
+    .donate-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:min(340px,86vw);padding:13px 16px;margin:0 auto 4px;text-decoration:none;background:#0052b4;font-size:14px}
+    .donate-link:hover{background:#003f8a}
+    .donate-or{font-size:12px;color:#7d8984;margin:10px 0 8px !important}
     .donate-note{font-size:11px;color:#7d8984;margin:10px 0 0}
 
     /* ---- tools row: install + alerts ---- */
@@ -387,6 +390,8 @@
     </div>
     <div class="donate-body">
       <p data-t="donate_text"></p>
+      <a class="btn donate-link" href="https://payment.tngdigital.com.my/sc/bDLnQ01Pw2" target="_blank" rel="noopener noreferrer" data-t="donate_link"></a>
+      <p class="donate-or" data-t="donate_or"></p>
       <a href="/icons/duitnow-qr.jpg" target="_blank" rel="noopener"><img class="donate-qr" id="donateQr" alt="DuitNow QR" /></a>
       <span class="donate-zoom" data-t="donate_zoom"></span>
       <a class="btn secondary small" id="donateSave" href="/icons/duitnow-qr.jpg" download="duitnow-akmalhanif.jpg" data-t="donate_save"></a>
@@ -518,7 +523,8 @@
         footer_b: '🌧️',
         footer_sub: 'Untuk jiran-jiran Puncak Alam. Jaga diri, jaga jiran.',
         donate_btn: '☕ Belanja kopi dev', donate_title: '☕ Belanja kopi dev',
-        donate_text: 'App ni percuma dan tiada iklan. Kalau rasa membantu, boleh belanja akmalhanif secawan kopi. Imbas QR ni guna app bank atau e-wallet (DuitNow).',
+        donate_text: 'App ni percuma dan tiada iklan. Kalau rasa membantu, boleh belanja akmalhanif secawan kopi.',
+        donate_link: '💳 Bayar terus guna Touch ’n Go', donate_or: 'atau imbas QR DuitNow ni guna app bank / e-wallet:',
         donate_zoom: 'Tekan gambar untuk besarkan.', donate_save: 'Simpan gambar QR', donate_note: 'Derma secara sukarela. Terima kasih banyak! 🙏',
       },
       en: {
@@ -613,7 +619,8 @@
         footer_b: '🌧️',
         footer_sub: 'For the neighbours of Puncak Alam. Stay safe, look out for each other.',
         donate_btn: '☕ Buy the dev a coffee', donate_title: '☕ Buy the dev a coffee',
-        donate_text: 'This app is free and has no ads. If it helps you, you can buy akmalhanif a coffee. Scan this QR with any bank or e-wallet app (DuitNow).',
+        donate_text: 'This app is free and has no ads. If it helps you, you can buy akmalhanif a coffee.',
+        donate_link: '💳 Pay directly with Touch ’n Go', donate_or: 'or scan this DuitNow QR with any bank / e-wallet app:',
         donate_zoom: 'Tap the image to make it bigger.', donate_save: 'Save the QR image', donate_note: 'Completely optional. Thank you so much! 🙏',
       },
     };
