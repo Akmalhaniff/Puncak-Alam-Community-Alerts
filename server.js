@@ -45,6 +45,7 @@ const PUBLIC_FILES = {
   '/icons/maskable-512.png': 'icons/maskable-512.png',
   '/icons/apple-touch-icon.png': 'icons/apple-touch-icon.png',
   '/icons/og-image.png': 'icons/og-image.png',
+  '/icons/duitnow-qr.jpg': 'icons/duitnow-qr.jpg', // optional: the donate button only shows when this file exists
 };
 for (const [route, file] of Object.entries(PUBLIC_FILES)) {
   app.get(route, (_req, res) => {
