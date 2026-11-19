@@ -8,7 +8,7 @@
   <meta name="description" content="A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam." />
   <meta property="og:title" content="Puncak Alam Community Alerts" />
   <meta property="og:description" content="A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam." />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="anonymous" />
   <style>
     :root{--ink:#122b2b;--muted:#71807c;--paper:#f5f6f0;--white:#fff;--line:#e5e9e1;--green:#1e6658;--green2:#dff1e7;--lime:#d3ef72;--orange:#e87947;--orangebg:#fff0e7;--red:#b9493e;--redbg:#fff0ee;--blue:#e9f1f2;--shadow:0 16px 48px #17333112;--radius:22px}
     *{box-sizing:border-box} body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45} button,input,select,textarea{font:inherit} button{cursor:pointer}
@@ -37,8 +37,7 @@
     .notice{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;background:#fff9e7;border:1px solid #f0e7c9;color:#5b563d;border-radius:15px;font-size:12px;margin-bottom:20px}
     .notice b{color:#433e25}
     .notice-icon{font-size:17px;line-height:1.1}
-    .layout{display:grid;grid-template-columns:2fr 1fr;gap:20px}
-    @media(max-width:900px){.layout{grid-template-columns:1fr}}
+    .layout{display:block}
     .panel{background:white;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
     .panel-head{padding:20px 21px 15px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
     .panel-head h2{margin:0;font-size:17px;letter-spacing:-.025em}
@@ -46,12 +45,15 @@
     .live-label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#638079;white-space:nowrap}
     .live-label i{background:#64b78e;width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:1px}
     .map{height:390px;margin:0 16px 14px;border-radius:17px;position:relative;overflow:hidden;background:#e6eee5}
-    .map-caption{position:absolute;z-index:1000;left:13px;bottom:12px;padding:6px 9px;background:#fff;border-radius:8px;font-size:10px;font-weight:700;box-shadow:0 2px 10px #142b2b18;pointer-events:none}
-    .signal-pin{width:29px;height:29px;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px #122b2b55;background:#dc7651}
+    .map-caption{position:absolute;z-index:1000;left:13px;top:12px;padding:6px 9px;background:#fff;border-radius:8px;font-size:10px;font-weight:700;box-shadow:0 2px 10px #142b2b18;pointer-events:none}
+    .signal-pin{position:relative;width:29px;height:29px;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px #122b2b55;background:#dc7651}
     .signal-pin::after{content:"";position:absolute;inset:7px;border-radius:50%;background:white}
     .signal-pin.clear{background:#39836a}
     .signal-pin.uncertain{background:#e4a23a}
     .signal-pin.old{opacity:.7}
+    .pin-wrap{width:29px;height:38px;display:flex;justify-content:center;cursor:pointer}
+    .maplibregl-popup-content{font-size:12px;max-width:240px;border-radius:10px}
+    .map-error{position:absolute;inset:0;display:grid;place-items:center;padding:22px;text-align:center;color:#52615d;font-size:13px}
     .map-pin-hint{font-size:10px;color:#667670;margin:0 20px 14px}
     .filters{display:flex;gap:7px;padding:0 20px 13px;overflow-x:auto}
     .filter{border:1px solid var(--line);background:white;border-radius:99px;padding:7px 11px;color:#63716d;font-size:11px;font-weight:700;white-space:nowrap}
@@ -68,16 +70,6 @@
     .report-tag.clear{background:#e8f5ed;color:#327451}
     .report-tag.uncertain{background:#fff7df;color:#816b29}
     .empty{padding:22px;text-align:center;color:var(--muted);font-size:13px}
-    .side{display:flex;flex-direction:column;gap:15px}
-    .ai-card{padding:18px;background:linear-gradient(135deg, #f0f7f4 0%, #e8f2ef 100%);border:1px solid #cce0d6;border-radius:var(--radius)}
-    .ai-card h3{margin:0 0 6px;font-size:15px;color:#133d35;display:flex;align-items:center;gap:8px}
-    .ai-card p{font-size:12px;color:#49635c;margin:0 0 12px}
-    .ai-input-row{display:flex;gap:8px}
-    .ai-input-row input{flex:1;border:1px solid #b8d2c6;border-radius:10px;padding:8px 11px;font-size:12px;background:white;outline:none}
-    .ai-result{margin-top:12px;padding:11px;background:white;border-radius:10px;font-size:12px;color:#2c3e3a;border:1px solid #d2e4dc;max-height:220px;overflow-y:auto}
-    .ai-links{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
-    .ai-link-pill{background:#e2edeb;color:#174f44;font-size:10px;font-weight:700;padding:4px 8px;border-radius:6px;text-decoration:none}
-    .ai-link-pill:hover{background:#d2e4dc}
     .bottom-note{color:#84908a;font-size:10px;text-align:center;margin:20px 0 0}
     .bottom-note a{color:#467064}
     dialog{border:0;padding:0;border-radius:20px;width:min(520px,calc(100vw - 26px));box-shadow:0 22px 90px #0c202c55;color:var(--ink)}
@@ -96,18 +88,28 @@
     .form-buttons{display:flex;justify-content:flex-end;gap:8px;margin-top:3px}
     .toast{position:fixed;bottom:18px;left:50%;transform:translate(-50%,20px);opacity:0;background:#153a35;color:white;padding:11px 16px;border-radius:12px;font-size:12px;font-weight:650;box-shadow:var(--shadow);transition:.24s;z-index:100;pointer-events:none}
     .toast.show{opacity:1;transform:translate(-50%,0)}
+    .auth-user{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#e3f2d2}
+    .auth-user img{width:26px;height:26px;border-radius:50%;object-fit:cover}
+    .auth-btn.signout{background:#b9493e;border-color:#d76255}
+    .report-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+    .mini-btn{border:1px solid var(--line);background:#f6f8f3;color:#3c5a52;border-radius:8px;padding:5px 9px;font-size:10px;font-weight:750}
+    .mini-btn:hover{background:#eaf1ea}
+    .mini-btn.good{background:#e8f5ed;border-color:#cfe6d8;color:#28694f}
+    .mini-btn.danger{background:#fff0ee;border-color:#f1d3cf;color:#a2453b}
+    .report.faded{opacity:.62}
+    .verified{color:#2a7a58;font-weight:800}
+    .older-toggle{border:1px dashed #cfd8cf;background:none;border-radius:12px;padding:10px;color:#4d6660;font-size:11px;font-weight:700}
+    .older-toggle:hover{background:#f6f8f3}
+    .feed-error{padding:13px 14px;border-radius:13px;background:var(--redbg);color:#8d3a31;font-size:12px}
+    .link-btn{border:0;background:none;padding:0;color:inherit;font-weight:800;text-decoration:underline}
+    .field input:disabled{background:#f2f4ee;color:#52615d}
   </style>
 </head>
 <body>
-  <!-- Quota monitoring banner (Free tier limit reached notice) -->
-  <div id="quotaBanner" style="display:none;" class="bg-red-900 text-white px-4 py-3 text-xs md:text-sm text-center sticky top-0 z-50 shadow-md font-semibold">
-    <span>⚠️ Free daily community traffic limit reached. This free demo is temporarily paused due to high traffic. Please check back later!</span>
-  </div>
-
   <header class="top">
     <div class="brand">
       <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5 20 6v5.7c0 5-3.4 8.1-8 9.8-4.6-1.7-8-4.8-8-9.8V6l8-3.5Z" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 13.2c1.8-1.2 3.1-1.2 4.8 0 1.7 1.2 3.1 1.2 5 0M8.2 16.1c1.2-.8 2.2-.8 3.4 0 1.2.8 2.2.8 3.5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
-      <span>Puncak Alam Community Alerts<small>Cloud SQL · Firebase Auth · Free Tier</small></span>
+      <span>Puncak Alam Community Alerts</span>
     </div>
     <div class="top-right">
       <span><i class="pulse"></i>Community Board</span>
@@ -122,7 +124,7 @@
       <div>
         <div class="eyebrow">Puncak Alam · community reported</div>
         <h1>See where water is rising.</h1>
-        <p>Map flood and road updates with PostgreSQL persistence and Google Sign-In.</p>
+        <p>Map flood and road updates with a clear location and report time.</p>
       </div>
       <div class="actions">
         <button class="btn" id="reportOpen">＋ Report flooding or a road hazard</button>
@@ -131,19 +133,19 @@
 
     <div class="notice">
       <span class="notice-icon">◉</span>
-      <div><b>Check the time and location before sharing.</b> These are community observations stored securely in Cloud SQL. Never drive or walk through floodwater. If anyone is in immediate danger, call <a href="tel:999">999</a>.</div>
+      <div><b>Check the time and location before sharing.</b> Never drive or walk through floodwater. If anyone is in immediate danger, call <a href="tel:999">999</a>.</div>
     </div>
 
     <section class="layout">
       <div class="panel">
         <div class="panel-head">
-          <div><h2>Area signal board</h2><p>Street map and live PostgreSQL observations</p></div>
-          <span class="live-label"><i></i>Cloud Connected</span>
+          <div><h2>Area signal board</h2><p>Street map and time-stamped community observations</p></div>
+          <span class="live-label"><i></i>Community reported</span>
         </div>
-        <div class="map" id="map" role="application" aria-label="Interactive Leaflet map of Puncak Alam">
+        <div class="map" id="map" role="application" aria-label="Interactive map of Puncak Alam">
           <span class="map-caption">Pins show approximate areas · tap map to choose report point</span>
         </div>
-        <p class="map-pin-hint">Map by OpenStreetMap. Tap map to choose a point for your next report.</p>
+        <p class="map-pin-hint">Tap the map to choose a point for your next report.</p>
         <div class="filters" role="group" aria-label="Filter reports">
           <button class="filter active" data-filter="all">All updates</button>
           <button class="filter" data-filter="flood">Flood</button>
@@ -153,20 +155,9 @@
         <div class="feed" id="feed"></div>
       </div>
 
-      <div class="side">
-        <div class="ai-card">
-          <h3>🤖 Puncak Alam AI Assistant</h3>
-          <p>Ask about weather, flood risks, or road conditions around Puncak Alam powered by Gemini & Maps Grounding.</p>
-          <div class="ai-input-row">
-            <input type="text" id="aiPromptInput" placeholder="e.g. Current weather and flood status in Fasa 1..." />
-            <button class="btn small" id="aiAskBtn">Ask AI</button>
-          </div>
-          <div id="aiResultContainer" style="display:none;"></div>
-        </div>
-      </div>
     </section>
 
-    <p class="bottom-note">Reports are saved securely to Cloud SQL PostgreSQL. For genuine emergencies, call <a href="https://www.malaysia.gov.my/en/topics/mers-999-emergency-line" target="_blank" rel="noopener">MERS 999</a>.</p>
+    <p class="bottom-note">For genuine emergencies, call <a href="https://www.malaysia.gov.my/en/topics/mers-999-emergency-line" target="_blank" rel="noopener">MERS 999</a>.</p>
   </main>
 
   <dialog id="reportDialog">
@@ -192,7 +183,7 @@
           </div>
         </div>
         <div class="field"><label for="rDetails">Short details</label><textarea id="rDetails" required maxlength="240" placeholder="Water level, landmark, direction of travel…"></textarea></div>
-        <div class="form-note">Your report is timestamped and stored in Cloud SQL.</div>
+        <div class="form-note">Your report is timestamped when posted.</div>
         <div class="form-buttons">
           <button class="btn secondary" type="button" data-close>Cancel</button>
           <button class="btn" type="submit">Post report</button>
@@ -207,247 +198,318 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-    import firebaseConfig from './firebase-applet-config.json';
+    import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    window._firebaseAuth = auth;
-    window._getIdToken = async () => {
-      const user = auth.currentUser;
-      if (!user) return null;
-      return await user.getIdToken();
-    };
+    window._getIdToken = async () => auth.currentUser ? await auth.currentUser.getIdToken() : null;
 
     const authContainer = document.getElementById('authContainer');
     const rNameInput = document.getElementById('rName');
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        if (rNameInput && !rNameInput.value) {
-          rNameInput.value = user.displayName || user.email.split('@')[0];
-        }
-        authContainer.innerHTML = `
-          <div style="display:flex;align-items:center;gap:8px;">
-            <img src="${user.photoURL || ''}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'" />
-            <span style="font-size:12px;font-weight:600;color:#e3f2d2;">${user.displayName || user.email}</span>
-            <button class="auth-btn" id="googleSignOutBtn" style="background:#b9493e;border-color:#d76255;">Sign Out</button>
-          </div>
-        `;
-        document.getElementById('googleSignOutBtn').onclick = () => signOut(auth);
-      } else {
-        authContainer.innerHTML = `<button class="auth-btn" id="googleSignInBtn">Sign in with Google</button>`;
-        document.getElementById('googleSignInBtn').onclick = async () => {
-          try {
-            await signInWithPopup(auth, provider);
-            window._showToast('Signed in successfully.');
-          } catch (err) {
-            console.error('Sign-in error:', err);
-            window._showToast('Sign-in failed.');
-          }
-        };
-      }
-    });
-
-    document.getElementById('googleSignInBtn')?.addEventListener('click', async () => {
+    async function signIn() {
       try {
         await signInWithPopup(auth, provider);
-        window._showToast('Signed in successfully.');
+        window._showToast('Signed in.');
       } catch (err) {
-        console.error('Sign-in error:', err);
-        window._showToast('Sign-in failed.');
+        if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+          console.error('Sign-in error:', err);
+          window._showToast('Sign-in failed.');
+        }
       }
+    }
+
+    // Build the header with DOM nodes (not innerHTML) so a display name can never inject markup.
+    function renderAuth(user) {
+      authContainer.replaceChildren();
+      if (!user) {
+        const btn = document.createElement('button');
+        btn.className = 'auth-btn';
+        btn.textContent = 'Sign in with Google';
+        btn.onclick = signIn;
+        authContainer.append(btn);
+        return;
+      }
+      const wrap = document.createElement('div');
+      wrap.className = 'auth-user';
+      if (user.photoURL) {
+        const img = document.createElement('img');
+        img.src = user.photoURL;
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.onerror = () => img.remove();
+        wrap.append(img);
+      }
+      const name = document.createElement('span');
+      name.textContent = user.displayName || user.email;
+      const out = document.createElement('button');
+      out.className = 'auth-btn signout';
+      out.textContent = 'Sign out';
+      out.onclick = () => signOut(auth);
+      wrap.append(name, out);
+      authContainer.append(wrap);
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      renderAuth(user);
+      // Signed-in reports are always posted under the Google name, so lock the field to match.
+      if (user) {
+        rNameInput.value = user.displayName || user.email.split('@')[0];
+        rNameInput.disabled = true;
+        rNameInput.title = 'Signed-in reports use your Google name';
+      } else {
+        rNameInput.value = '';
+        rNameInput.disabled = false;
+        rNameInput.title = '';
+      }
+      window._onAuthChange?.(!!user);
     });
   </script>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin="anonymous"></script>
   <script>
-    let reports = [], currentFilter='all', mapInstance=null, reportsLayer=null, draftMarker=null, selectedCoordinates=null, waitingForPin=false;
+    const MAP_STYLE='https://tiles.openfreemap.org/styles/liberty';
+    const HOUR=3600000;
+    const FADE_AFTER=2*HOUR;      // pins and cards fade once a report is this old
+    const HIDE_AFTER=24*HOUR;     // older reports are hidden unless "Show older" is on
+    const REFRESH_EVERY=60000;
 
-    const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),2600)}
-    window._showToast = toast;
+    let reports=[], currentFilter='all', showOlder=false, loadError=false;
+    let me={signedIn:false};
+    let mapInstance=null, reportMarkers=new Map(), draftMarker=null, selectedCoordinates=null, waitingForPin=false;
 
-    function showQuotaLimitNotice(){
-      document.getElementById('quotaBanner').style.display = 'block';
-    }
+    const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),3200)}
+    window._showToast=toast;
 
+    const ageMs=r=>Date.now()-new Date(r.time).getTime();
     function ageLabel(iso){const mins=Math.max(0,Math.floor((Date.now()-new Date(iso).getTime())/60000));if(mins<1)return 'just now';if(mins<60)return `${mins} min ago`;const h=Math.floor(mins/60);if(h<24)return `${h} hr${h===1?'':'s'} ago`;const d=Math.floor(h/24);return `${d} day${d===1?'':'s'} ago`;}
-    
+
+    async function authHeaders(json){
+      const h=json?{'Content-Type':'application/json'}:{};
+      const token=window._getIdToken?await window._getIdToken():null;
+      if(token)h['Authorization']=`Bearer ${token}`;
+      return h;
+    }
+    async function errorMessage(res,fallback){
+      try{const body=await res.json();if(body?.error)return body.error}catch{}
+      return fallback;
+    }
+
+    // ----- data -----
+
     async function fetchReports(){
-      try {
-        const res = await fetch('/api/reports');
-        if(res.status === 429 || res.status === 503){
-          showQuotaLimitNotice();
-          return;
-        }
-        if(res.ok){
-          reports = await res.json();
-          renderReports();
-          renderMapMarkers();
-        }
-      } catch(err){
-        console.warn('Failed to fetch reports from backend:', err);
+      try{
+        const res=await fetch('/api/reports');
+        if(!res.ok)throw new Error(`HTTP ${res.status}`);
+        reports=await res.json();
+        loadError=false;
+      }catch(err){
+        console.warn('Failed to load reports:',err);
+        loadError=true;
       }
+      renderReports();
     }
 
-    function open(id){document.getElementById(id).showModal()}
-    function close(){document.querySelectorAll('dialog[open]').forEach(d=>d.close())}
+    window._onAuthChange=async signedIn=>{
+      me={signedIn:false};
+      if(signedIn){
+        try{const res=await fetch('/api/me',{headers:await authHeaders()});if(res.ok)me=await res.json()}catch{}
+      }
+      renderReports();
+    };
 
-    function reportCoords(r){if(r.lat && r.lng)return [r.lat, r.lng];const a=(r.area||'').toLowerCase();if(a.includes('hillpark'))return [3.211,101.462];if(a.includes('suria')||a.includes('jeram'))return [3.241,101.413];if(a.includes('avatar'))return [3.222,101.447];return [3.212,101.434];}
-    function markerIcon(r){const old=Date.now()-new Date(r.time).getTime()>2*3600000;return L.divIcon({className:'',html:`<div class="signal-pin ${esc(r.status)}${old?' old':''}"></div>`,iconSize:[29,29],iconAnchor:[14,28],popupAnchor:[0,-27]})}
-    
-    function renderMapMarkers(){
-      if(!reportsLayer)return;
-      reportsLayer.clearLayers();
-      const shown=reports.filter(r=>currentFilter==='all'||r.type===currentFilter);
-      shown.forEach(r=>{
-        const popup=`<b>${esc(r.area)}</b><br/>${esc(new Date(r.time).toLocaleString())} · ${esc(ageLabel(r.time))}<br/>${esc(r.details)}<br/><small>PostgreSQL persisted · by ${esc(r.who)}</small>`;
-        L.marker(reportCoords(r),{icon:markerIcon(r)}).bindPopup(popup).addTo(reportsLayer);
+    const canRemove=r=>me.signedIn&&(me.isAdmin||(r.userId!=null&&r.userId===me.userId));
+
+    // A report is superseded when a later "clear" report exists at the same spot.
+    function supersededBy(r){
+      if(r.status==='clear')return null;
+      return reports.find(c=>c.status==='clear'&&c.id!==r.id&&c.area===r.area&&c.lat===r.lat&&c.lng===r.lng&&new Date(c.time)>new Date(r.time))||null;
+    }
+
+    function visibleReports(){
+      return reports
+        .filter(r=>currentFilter==='all'||r.type===currentFilter)
+        .filter(r=>showOlder||ageMs(r)<=HIDE_AFTER)
+        .sort((a,b)=>new Date(b.time)-new Date(a.time));
+    }
+    const hiddenOlderCount=()=>reports.filter(r=>(currentFilter==='all'||r.type===currentFilter)&&ageMs(r)>HIDE_AFTER).length;
+
+    // ----- map -----
+
+    function reportCoords(r){if(r.lat!=null&&r.lng!=null)return [r.lat,r.lng];const a=(r.area||'').toLowerCase();if(a.includes('hillpark'))return [3.211,101.462];if(a.includes('suria')||a.includes('jeram'))return [3.241,101.413];if(a.includes('avatar'))return [3.222,101.447];return [3.212,101.434];}
+
+    function pinElement(status,faded){
+      const wrap=document.createElement('div');wrap.className='pin-wrap';
+      const pin=document.createElement('div');pin.className=`signal-pin ${status}${faded?' old':''}`;wrap.appendChild(pin);return wrap;
+    }
+
+    function renderMapMarkers(list){
+      if(!mapInstance)return;
+      reportMarkers.forEach(m=>m.remove());reportMarkers.clear();
+      list.filter(r=>!supersededBy(r)).forEach(r=>{
+        const [lat,lng]=reportCoords(r);
+        const popup=`<b>${esc(r.area)}</b><br/>${esc(new Date(r.time).toLocaleString())} · ${esc(ageLabel(r.time))}<br/>${esc(r.details)}<br/><small>by ${esc(r.who)}${r.lat==null?' · approximate area':''}</small>`;
+        const m=new maplibregl.Marker({element:pinElement(r.status,ageMs(r)>FADE_AFTER),anchor:'bottom'})
+          .setLngLat([lng,lat])
+          .setPopup(new maplibregl.Popup({offset:34,closeButton:false}).setHTML(popup))
+          .addTo(mapInstance);
+        reportMarkers.set(r.id,m);
       });
-      if(draftMarker)draftMarker.addTo(mapInstance);
     }
 
-    function setSelectedPoint(latlng){
-      selectedCoordinates=[Number(latlng.lat.toFixed(6)),Number(latlng.lng.toFixed(6))];
-      if(draftMarker)mapInstance.removeLayer(draftMarker);
-      draftMarker=L.marker(selectedCoordinates,{icon:L.divIcon({className:'',html:'<div class="signal-pin uncertain"></div>',iconSize:[29,29],iconAnchor:[14,28]})}).bindPopup('Selected point for your next report').addTo(mapInstance);
+    function focusReport(id){
+      const r=reports.find(x=>x.id===id);if(!r||!mapInstance)return;
+      const [lat,lng]=reportCoords(r);
+      document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'});
+      mapInstance.flyTo({center:[lng,lat],zoom:Math.max(mapInstance.getZoom(),14)});
+      reportMarkers.forEach(m=>{if(m.getPopup()?.isOpen())m.togglePopup()});
+      const m=reportMarkers.get(id);if(m&&!m.getPopup().isOpen())m.togglePopup();
+    }
+
+    function setSelectedPoint(lat,lng){
+      selectedCoordinates=[Number(lat.toFixed(6)),Number(lng.toFixed(6))];
+      if(draftMarker)draftMarker.remove();
+      draftMarker=new maplibregl.Marker({element:pinElement('uncertain',false),anchor:'bottom'})
+        .setLngLat([selectedCoordinates[1],selectedCoordinates[0]])
+        .addTo(mapInstance);
       document.getElementById('pinStatus').textContent=`Map point selected · ${selectedCoordinates[0].toFixed(4)}, ${selectedCoordinates[1].toFixed(4)}`;
       document.getElementById('pinStatus').style.color='#28694f';
-      renderMapMarkers();
     }
 
     function initMap(){
       const el=document.getElementById('map');
-      if(!window.L){el.innerHTML='<div style="padding:22px;color:#52615d">Map library did not load.</div>';return}
-      mapInstance=L.map(el,{scrollWheelZoom:false}).setView([3.222,101.438],12);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>'}).addTo(mapInstance);
-      reportsLayer=L.layerGroup().addTo(mapInstance);
+      if(!window.maplibregl){
+        el.insertAdjacentHTML('afterbegin','<div class="map-error">Map library did not load. Reports are still listed below.</div>');
+        return;
+      }
+      mapInstance=new maplibregl.Map({container:el,style:MAP_STYLE,center:[101.438,3.222],zoom:11.5,cooperativeGestures:true});
+      mapInstance.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
+      mapInstance.on('error',e=>console.warn('Map error:',e?.error||e));
       mapInstance.on('click',e=>{
-        setSelectedPoint(e.latlng);
-        if(waitingForPin){waitingForPin=false;open('reportDialog');toast('Map point added to your report.')}
+        // Clicks on an existing pin open its popup; don't also treat them as a new point.
+        if(e.originalEvent.target.closest('.pin-wrap'))return;
+        setSelectedPoint(e.lngLat.lat,e.lngLat.lng);
+        if(waitingForPin){waitingForPin=false;openDialog('reportDialog');toast('Map point added to your report.')}
       });
-      fetchReports();
     }
+
+    // ----- feed -----
 
     function renderReports(){
       const feed=document.getElementById('feed');
-      const filtered=reports.filter(r=>currentFilter==='all'||r.type===currentFilter).sort((a,b)=>new Date(b.time)-new Date(a.time));
-      feed.innerHTML=filtered.length?filtered.map(r=>{
-        const old=Date.now()-new Date(r.time).getTime()>2*3600000;
-        const statusName={danger:'Flood reported',clear:'Clear · at report time',uncertain:'Needs confirmation'}[r.status]||'Community update';
-        return `<article class="report"><span class="report-dot ${r.status}"></span><div><div class="report-title">${esc(r.area)}</div><div class="report-meta">${esc(new Date(r.time).toLocaleString())} · ${esc(ageLabel(r.time))} · by ${esc(r.who)}</div><p>${esc(r.details)}</p></div><span class="report-tag ${r.status}">${statusName}</span></article>`
-      }).join(''):'<div class="empty">No reports in this filter. Share a location and time if you have a current update.</div>';
-      renderMapMarkers();
+      const list=visibleReports();
+      const older=hiddenOlderCount();
+      const statusName={danger:'Flood reported',clear:'Clear · at report time',uncertain:'Needs confirmation'};
+
+      let html='';
+      if(loadError){
+        html+='<div class="feed-error" role="alert">Couldn’t load reports. Check your connection and <button type="button" class="link-btn" data-act="retry">try again</button>.</div>';
+      }
+      html+=list.map(r=>{
+        const later=supersededBy(r);
+        const faded=ageMs(r)>FADE_AFTER||!!later;
+        const tag=later?'<span class="report-tag clear">Later reported clear</span>':`<span class="report-tag ${esc(r.status)}">${statusName[r.status]||'Community update'}</span>`;
+        const actions=[`<button class="mini-btn" type="button" data-act="focus" data-id="${esc(r.id)}">Show on map</button>`];
+        if(r.status!=='clear'&&!later&&r.type!=='weather')actions.push(`<button class="mini-btn good" type="button" data-act="clear" data-id="${esc(r.id)}">Now clear</button>`);
+        if(canRemove(r))actions.push(`<button class="mini-btn danger" type="button" data-act="remove" data-id="${esc(r.id)}">Remove</button>`);
+        return `<article class="report${faded?' faded':''}"><span class="report-dot ${esc(r.status)}"></span><div><div class="report-title">${esc(r.area)}</div><div class="report-meta">${esc(new Date(r.time).toLocaleString())} · ${esc(ageLabel(r.time))} · by ${esc(r.who)}${r.userId!=null?' <span class="verified" title="Posted while signed in">✓</span>':''}</div><p>${esc(r.details)}</p><div class="report-actions">${actions.join('')}</div></div>${tag}</article>`;
+      }).join('');
+      if(!list.length&&!loadError){
+        html+=`<div class="empty">No reports in the last 24 hours${currentFilter==='all'?'':' for this filter'}. Share a location and time if you have a current update.</div>`;
+      }
+      if(older){
+        html+=`<button type="button" class="older-toggle" data-act="older">${showOlder?'Hide reports older than 24 hours':`Show ${older} older report${older===1?'':'s'}`}</button>`;
+      }
+      feed.innerHTML=html;
+      renderMapMarkers(list);
     }
 
-    document.getElementById('reportOpen').onclick=()=>open('reportDialog');
-    document.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
-    document.getElementById('choosePin').onclick=()=>{close();waitingForPin=true;toast('Tap the map to select the report location.');document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'})};
+    async function markClear(id){
+      const r=reports.find(x=>x.id===id);if(!r)return;
+      if(!confirm(`Report "${r.area}" as clear now?`))return;
+      try{
+        const res=await fetch(`/api/reports/${id}/clear`,{method:'POST',headers:await authHeaders(true),body:JSON.stringify({who:document.getElementById('rName').value.trim()})});
+        if(!res.ok){toast(await errorMessage(res,'Couldn’t update that report.'));return}
+        reports.unshift(await res.json());
+        renderReports();
+        toast('Thanks — marked as clear.');
+      }catch{toast('Network error. Please try again.')}
+    }
+
+    async function removeReport(id){
+      const r=reports.find(x=>x.id===id);if(!r)return;
+      if(!confirm(`Remove the report "${r.area}"? This can’t be undone.`))return;
+      try{
+        const res=await fetch(`/api/reports/${id}`,{method:'DELETE',headers:await authHeaders()});
+        if(!res.ok){toast(await errorMessage(res,'Couldn’t remove that report.'));return}
+        reports=reports.filter(x=>x.id!==id);
+        renderReports();
+        toast('Report removed.');
+      }catch{toast('Network error. Please try again.')}
+    }
+
+    document.getElementById('feed').addEventListener('click',e=>{
+      const b=e.target.closest('[data-act]');if(!b)return;
+      const id=Number(b.dataset.id);
+      ({focus:()=>focusReport(id),clear:()=>markClear(id),remove:()=>removeReport(id),retry:fetchReports,older:()=>{showOlder=!showOlder;renderReports()}})[b.dataset.act]?.();
+    });
+
+    // ----- dialog and form -----
+
+    function openDialog(id){document.getElementById(id).showModal()}
+    function closeDialog(){document.querySelectorAll('dialog[open]').forEach(d=>d.close())}
+
+    document.getElementById('reportOpen').onclick=()=>openDialog('reportDialog');
+    document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeDialog);
+    document.getElementById('choosePin').onclick=()=>{closeDialog();waitingForPin=true;toast('Tap the map to select the report location.');document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'})};
     document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x===b));renderReports()});
-    
+
     document.getElementById('reportForm').onsubmit=async e=>{
       e.preventDefault();
-      const token = window._getIdToken ? await window._getIdToken() : null;
+      const submit=e.target.querySelector('[type=submit]');
+      const nameInput=document.getElementById('rName');
       const payload={
-        type: document.getElementById('rType').value,
-        status: document.getElementById('rStatus').value,
-        area: document.getElementById('rArea').value.trim(),
-        details: document.getElementById('rDetails').value.trim(),
-        who: document.getElementById('rName').value.trim() || 'Community member',
-        lat: selectedCoordinates ? selectedCoordinates[0] : null,
-        lng: selectedCoordinates ? selectedCoordinates[1] : null,
-        approximate: !selectedCoordinates
+        type:document.getElementById('rType').value,
+        status:document.getElementById('rStatus').value,
+        area:document.getElementById('rArea').value.trim(),
+        details:document.getElementById('rDetails').value.trim(),
+        who:nameInput.value.trim(),
+        lat:selectedCoordinates?selectedCoordinates[0]:null,
+        lng:selectedCoordinates?selectedCoordinates[1]:null
       };
-
-      try {
-        const headers={'Content-Type':'application/json'};
-        if(token) headers['Authorization'] = `Bearer ${token}`;
-        const res = await fetch('/api/reports',{method:'POST',headers,body:JSON.stringify(payload)});
-        if(res.status === 429 || res.status === 503){
-          showQuotaLimitNotice();
-          toast('Free quota limit reached.');
-          return;
-        }
-        if(res.ok){
-          const created = await res.json();
-          reports.unshift(created);
-          selectedCoordinates=null;
-          if(draftMarker){mapInstance.removeLayer(draftMarker);draftMarker=null}
-          renderReports();
-          e.target.reset();
-          document.getElementById('pinStatus').textContent='No pin selected';
-          close();
-          toast('Report saved to Cloud SQL database.');
-          document.getElementById('feed').scrollIntoView({behavior:'smooth',block:'start'});
-        } else {
-          toast('Failed to save report.');
-        }
-      } catch(err){
-        console.error('Error submitting report:', err);
-        toast('Network error submitting report.');
-      }
-    };
-
-    // AI Query handler with Maps Grounding
-    document.getElementById('aiAskBtn').onclick=async()=>{
-      const promptInput = document.getElementById('aiPromptInput');
-      const resultContainer = document.getElementById('aiResultContainer');
-      const query = promptInput.value.trim();
-      if(!query) return;
-
-      resultContainer.style.display='block';
-      resultContainer.innerHTML='<div style="color:#667670;font-style:italic;">Querying Gemini AI with Maps grounding...</div>';
-
-      try {
-        const res = await fetch('/api/ai/query',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({prompt: query, lat: 3.222, lng: 101.438})
-        });
-        if(res.status === 429 || res.status === 503){
-          showQuotaLimitNotice();
-          resultContainer.innerHTML='<div style="color:#b9493e;">Free traffic limit reached. Please check back later.</div>';
-          return;
-        }
-        if(res.ok){
-          const data = await res.json();
-          let html = `<div>${esc(data.text)}</div>`;
-          if(data.groundingChunks && data.groundingChunks.length > 0){
-            html += `<div class="ai-links">`;
-            data.groundingChunks.forEach(chunk=>{
-              if(chunk.maps && chunk.maps.uri){
-                html += `<a class="ai-link-pill" href="${esc(chunk.maps.uri)}" target="_blank" rel="noopener">📍 ${esc(chunk.maps.title || 'View on Maps')}</a>`;
-              }
-            });
-            html += `</div>`;
-          }
-          resultContainer.innerHTML = html;
-        } else {
-          resultContainer.innerHTML = `<div style="color:#b9493e;">Free traffic limit reached. Please check back later.</div>`;
-        }
-      } catch(err){
-        console.error('AI query error:', err);
-        resultContainer.innerHTML = `<div style="color:#b9493e;">Free traffic limit reached. Please check back later.</div>`;
-      }
-    };
-
-    // Quota monitoring global listeners (GHP compliance)
-    window.gm_authFailure = () => {
-      showQuotaLimitNotice();
-    };
-    const origError = console.error;
-    console.error = (...args) => {
-      origError.apply(console, args);
-      const msg = args.map(a => String(a)).join(' ');
-      if (msg.includes('OverQuotaMapError') || msg.includes('QuotaExceededError')) {
-        showQuotaLimitNotice();
+      submit.disabled=true;
+      try{
+        const res=await fetch('/api/reports',{method:'POST',headers:await authHeaders(true),body:JSON.stringify(payload)});
+        if(!res.ok){toast(await errorMessage(res,'Couldn’t post your report. Please try again.'));return}
+        reports.unshift(await res.json());
+        selectedCoordinates=null;
+        if(draftMarker){draftMarker.remove();draftMarker=null}
+        const keepName=nameInput.disabled?nameInput.value:'';
+        e.target.reset();
+        nameInput.value=keepName;
+        document.getElementById('pinStatus').textContent='No pin selected';
+        document.getElementById('pinStatus').style.color='';
+        closeDialog();
+        renderReports();
+        toast('Report posted.');
+        document.getElementById('feed').scrollIntoView({behavior:'smooth',block:'start'});
+      }catch(err){
+        console.error('Error submitting report:',err);
+        toast('Network error. Please try again.');
+      }finally{
+        submit.disabled=false;
       }
     };
 
     document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
+
     initMap();
+    fetchReports();
+    // Keep the board current; skip while the tab is hidden.
+    setInterval(()=>{if(!document.hidden)fetchReports()},REFRESH_EVERY);
   </script>
 </body>
 </html>
