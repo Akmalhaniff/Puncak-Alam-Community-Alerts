@@ -32,6 +32,13 @@ test('home page has link-preview tags', async () => {
   assert.ok(!data.includes('<!--OG-->'));
 });
 
+test('donate button is rendered by the server when the QR image exists', async () => {
+  const { data } = await app.api('GET', '/');
+  assert.match(data, /<button type="button" class="donate-btn" id="donateBtn" data-t="donate_btn">/);
+  assert.ok(!data.includes('<!--DONATE-->'));
+  assert.equal((await fetch(app.base + '/icons/duitnow-qr.jpg')).headers.get('content-type'), 'image/jpeg');
+});
+
 test('starting hotspots are added once', async () => {
   const { status, data } = await app.api('GET', '/api/hotspots');
   assert.equal(status, 200);

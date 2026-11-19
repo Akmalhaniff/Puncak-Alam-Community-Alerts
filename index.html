@@ -326,7 +326,7 @@
   <footer class="site-footer">
     <p class="footer-line"><span data-t="footer_a"></span> <span class="nowrap"><span class="dev-name">akmalhanif</span> <span data-t="footer_b"></span></span></p>
     <p class="footer-sub" data-t="footer_sub"></p>
-    <button type="button" class="donate-btn" id="donateBtn" hidden data-t="donate_btn"></button>
+    <button type="button" class="donate-btn" id="donateBtn" hidden data-t="donate_btn"></button><!--DONATE-->
   </footer>
 
   <dialog id="reportDialog">
@@ -1188,7 +1188,13 @@
       }
     };
 
-    document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
+    // Tap outside a box to close it — but only when the press both starts and ends on the dark backdrop,
+    // so the tap that opens a box (or a scroll inside it) can never close it straight away.
+    document.querySelectorAll('dialog').forEach(d=>{
+      let downOnBackdrop=false;
+      d.addEventListener('pointerdown',e=>{downOnBackdrop=e.target===d});
+      d.addEventListener('click',e=>{if(e.target===d&&downOnBackdrop)d.close();downOnBackdrop=false});
+    });
 
     // ----- language switch -----
     document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
@@ -1341,15 +1347,17 @@
     };
     initNotify();
 
-    // ----- donate (DuitNow QR) — shown only when icons/duitnow-qr.jpg exists -----
-    (async()=>{
-      try{
-        const res=await fetch('/icons/duitnow-qr.jpg',{method:'HEAD'});
-        if(!res.ok||!(res.headers.get('content-type')||'').startsWith('image/'))return;
-        const btn=document.getElementById('donateBtn');btn.hidden=false;
-        btn.onclick=()=>{const img=document.getElementById('donateQr');if(!img.src)img.src='/icons/duitnow-qr.jpg';openDialog('donateDialog')};
-      }catch{}
-    })();
+    // ----- donate (DuitNow QR) -----
+    // The server shows the button only when icons/duitnow-qr.jpg exists. The QR starts loading in the
+    // background straight away, so the box opens complete on the first tap instead of jumping.
+    {
+      const btn=document.getElementById('donateBtn'), img=document.getElementById('donateQr');
+      if(!btn.hidden){
+        const preload=()=>{if(!img.getAttribute('src'))img.src='/icons/duitnow-qr.jpg'};
+        if('requestIdleCallback' in window)requestIdleCallback(preload,{timeout:4000});else setTimeout(preload,1500);
+        btn.addEventListener('click',()=>{preload();openDialog('donateDialog')});
+      }
+    }
 
     // ----- links to one report: /?r=123 (from WhatsApp shares and notifications) -----
     let deepLinkId=Number(new URLSearchParams(location.search).get('r'))||null;

@@ -263,7 +263,11 @@ async function seedHotspots() {
 }
 
 // ---------- the page, with link previews for WhatsApp ----------
-const INDEX_TEMPLATE = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+// The donate button is shown straight in the page when the DuitNow QR image exists (no extra request, no layout jump).
+const DONATE_QR = fs.existsSync(path.join(__dirname, 'icons', 'duitnow-qr.jpg'));
+const INDEX_TEMPLATE = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8')
+  .replace('id="donateBtn" hidden', DONATE_QR ? 'id="donateBtn"' : 'id="donateBtn" hidden')
+  .replace('<!--DONATE-->', '');
 const OG_MARKER = '<!--OG-->';
 // Public address for link previews. AI Studio's proxy hands the app an internal Host (localhost:3000), and
 // WhatsApp needs a public image URL, so internal hosts are replaced by PUBLIC_URL. Set PUBLIC_URL to change it,
