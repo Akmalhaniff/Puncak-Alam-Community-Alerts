@@ -4,7 +4,7 @@ A simple community map for sharing flood, heavy-rain, and road-condition observa
 
 ## View the page
 
-Open `index.html` from a web server or static hosting service. The street map uses Leaflet and OpenStreetMap, so an internet connection is required to load the map and its tiles.
+Open `index.html` from a web server or static hosting service. The street map is embedded from OpenStreetMap, so an internet connection is required to load it. Each report card can focus the map on that report's approximate area.
 
 ## Prototype limits
 
@@ -13,4 +13,4 @@ Open `index.html` from a web server or static hosting service. The street map us
 - Shared alerts require a hosted data service and a publishing workflow for community reports.
 - For immediate danger in Malaysia, call 999.
 
-The map includes OpenStreetMap attribution and uses its standard interactive tile service.
+The embedded map includes OpenStreetMap attribution. If the embed is blocked in your browser, use the direct OpenStreetMap link below the map.
