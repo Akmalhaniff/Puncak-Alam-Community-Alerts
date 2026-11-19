@@ -232,10 +232,12 @@ async function notifyNearby(report) {
 }
 
 // ---------- "report a problem" flags ----------
-// After FLAG_HIDE_THRESHOLD different people flag a report, it's hidden from the public until the admin
-// reviews it ("Keep" un-hides it for good; "Delete" removes it). Photos of hidden reports aren't served.
+// Only signed-in Google accounts can flag, one flag per account per report. After FLAG_HIDE_THRESHOLD different
+// accounts flag a report, it's hidden from the public until the admin reviews it ("Keep" un-hides it for good;
+// "Delete" removes it). Photos of hidden reports aren't served. Older flags made without signing in
+// (voter_key 'ip:…') are ignored.
 const FLAG_HIDE_THRESHOLD = 3;
-const flagCount = sql`(select count(*)::int from report_flags f where f.report_id = ${reports.id})`;
+const flagCount = sql`(select count(*)::int from report_flags f where f.report_id = ${reports.id} and f.voter_key like 'u:%')`;
 const isHidden = sql`(coalesce(${reports.reviewed}, false) = false and ${flagCount} >= ${FLAG_HIDE_THRESHOLD})`;
 
 // ---------- hotspots (flood-prone spots, edited in /admin) ----------
@@ -352,12 +354,14 @@ app.get('/api/reports/:id/photo', async (req, res) => {
   }
 });
 
-// "Report a problem": one flag per person per report; enough flags hide the report until the admin reviews it.
+// "Report a problem": signed-in accounts only, one flag per account per report; enough flags hide the report
+// until the admin reviews it.
 app.post('/api/reports/:id/flag', rateLimitConfirms, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid report id.' });
+  const decoded = await verifyToken(req);
+  if (!decoded) return res.status(401).json({ error: 'Sign in to report a problem.' });
   try {
-    const decoded = await verifyToken(req);
     const [report] = await db.select({ id: reports.id }).from(reports).where(eq(reports.id, id)).limit(1);
     if (!report) return res.status(404).json({ error: 'Report not found.' });
     await db.insert(reportFlags).values({ reportId: id, voterKey: voterKey(req, decoded) }).onConflictDoNothing();

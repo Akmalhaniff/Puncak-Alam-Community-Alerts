@@ -72,20 +72,33 @@ test('"I see it too" counts one vote per person', async () => {
   assert.equal((await app.api('POST', `/api/reports/${r.id}/confirm`, { ip: b })).data.confirmCount, 2);
 });
 
-test('three different people flagging hides a report and its photo; one person cannot do it alone', async () => {
+test('flagging needs a Google sign-in; 3 signed-in accounts hide a report and its photo', async () => {
   const { data: r } = await app.api('POST', '/api/reports', { ip: freshIp(), body: flood({ area: 'TEST flag me', photo: { thumb: tinyJpeg, full: tinyJpeg } }) });
   const visible = async () => (await app.api('GET', '/api/reports')).data.some(x => x.id === r.id);
-  const solo = freshIp();
-  for (let i = 0; i < 3; i++) await app.api('POST', `/api/reports/${r.id}/flag`, { ip: solo });
-  assert.ok(await visible(), 'one person flagging repeatedly must not hide it');
-  await app.api('POST', `/api/reports/${r.id}/flag`, { ip: freshIp() });
-  await app.api('POST', `/api/reports/${r.id}/flag`, { ip: freshIp() });
-  assert.ok(!(await visible()), 'hidden after 3 different people flag it');
+  const touch = () => app.api('POST', `/api/reports/${r.id}/confirm`, { ip: freshIp() }); // any write refreshes the cache
+
+  // Not signed in (or a fake token): refused.
+  assert.equal((await app.api('POST', `/api/reports/${r.id}/flag`, { ip: freshIp() })).status, 401);
+  assert.equal((await app.api('POST', `/api/reports/${r.id}/flag`, { ip: freshIp(), headers: { authorization: 'Bearer fake' } })).status, 401);
+
+  // Old anonymous flags (from before sign-in was required) don't count.
+  for (let i = 0; i < 5; i++) await app.sql("insert into report_flags(report_id, voter_key) values($1, $2)", [r.id, `ip:old${i}`]);
+  await touch();
+  assert.ok(await visible(), 'anonymous flags must be ignored');
+
+  // Signed-in flags are stored as 'u:<google uid>' (real Google sign-ins can't be made in tests, so add them directly).
+  await app.sql("insert into report_flags(report_id, voter_key) values($1, 'u:alice'), ($1, 'u:bob')", [r.id]);
+  await touch();
+  assert.ok(await visible(), 'two accounts are not enough');
+  await app.sql("insert into report_flags(report_id, voter_key) values($1, 'u:carol')", [r.id]);
+  await touch();
+  assert.ok(!(await visible()), 'hidden after 3 signed-in accounts flag it');
   assert.equal((await fetch(`${app.base}/api/reports/${r.id}/photo`)).status, 404);
-  // The admin "keeps" it: flags cleared, visible again (done directly here; the admin API needs a Google sign-in).
+
+  // The admin "keeps" it: flags cleared and it never auto-hides again.
   await app.sql('update reports set reviewed = true where id = $1', [r.id]);
   await app.sql('delete from report_flags where report_id = $1', [r.id]);
-  await app.api('POST', `/api/reports/${r.id}/confirm`, { ip: freshIp() }); // any write refreshes the cache
+  await touch();
   assert.ok(await visible());
 });
 

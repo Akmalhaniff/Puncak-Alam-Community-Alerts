@@ -480,7 +480,7 @@
         act_confirm: '👍 Saya pun nampak', act_confirmed: '👍 Dah sahkan', confirm_count: '{n} orang sahkan',
         t_confirmed: 'Terima kasih kerana sahkan!',
         act_share: 'Kongsi WhatsApp', share_view: 'Lihat peta:',
-        act_flag: '🚩 Lapor salah', act_flagged: '🚩 Dah dilapor', confirm_flag: 'Laporkan "{area}" sebagai salah, palsu atau tak sesuai? Admin akan semak.', t_flagged: 'Terima kasih. Admin akan semak laporan ini.',
+        act_flag: '🚩 Lapor salah', act_flagged: '🚩 Dah dilapor', confirm_flag: 'Laporkan "{area}" sebagai salah, palsu atau tak sesuai? Admin akan semak.', t_flagged: 'Terima kasih. Admin akan semak laporan ini.', flag_signin: 'Log masuk dengan Google dulu untuk lapor salah. Ini supaya laporan tak disorok sesuka hati.',
         radar_toggle: 'Radar hujan', radar_time: 'Radar {time}', radar_fail: 'Radar hujan tak dapat dimuat sekarang.',
         install_btn: 'Pasang app', t_installed: 'App dipasang!',
         install_ios: 'Untuk pasang: tekan butang Kongsi (□↑) di Safari, kemudian pilih "Add to Home Screen".',
@@ -572,7 +572,7 @@
         act_confirm: '👍 I see it too', act_confirmed: '👍 Confirmed', confirm_count: '{n} confirmed',
         t_confirmed: 'Thanks for confirming!',
         act_share: 'Share on WhatsApp', share_view: 'See the map:',
-        act_flag: '🚩 Report a problem', act_flagged: '🚩 Reported', confirm_flag: 'Report "{area}" as wrong, fake or not suitable? The admin will check it.', t_flagged: 'Thanks. The admin will check this report.',
+        act_flag: '🚩 Report a problem', act_flagged: '🚩 Reported', confirm_flag: 'Report "{area}" as wrong, fake or not suitable? The admin will check it.', t_flagged: 'Thanks. The admin will check this report.', flag_signin: 'Please sign in with Google to report a problem. This stops reports being hidden unfairly.',
         radar_toggle: 'Rain radar', radar_time: 'Radar {time}', radar_fail: 'Rain radar isn’t available right now.',
         install_btn: 'Install app', t_installed: 'App installed!',
         install_ios: 'To install: tap the Share button (□↑) in Safari, then choose "Add to Home Screen".',
@@ -608,6 +608,7 @@
       'Details are required.': 'err_required',
       'Sign in to remove reports.': 'err_sign_in',
       'You can only remove your own reports.': 'err_own',
+      'Sign in to report a problem.': 'flag_signin',
     };
 
     function applyStaticText() {
@@ -693,6 +694,7 @@
       authContainer.append(wrap);
     }
     window._renderAuth = renderAuth;
+    window._signIn = signIn;
     renderAuth();
 
     onAuthStateChanged(auth, (user) => {
@@ -995,6 +997,8 @@
 
     async function flagReport(id){
       const r=reports.find(x=>x.id===id);if(!r||flaggedIds.has(id))return;
+      // Only signed-in people can flag, so a few people can't hide reports on their own.
+      if(!me.signedIn){toast(t('flag_signin'),6000);window._signIn?.();return}
       if(!confirm(t('confirm_flag',{area:r.area})))return;
       try{
         const res=await fetch(`/api/reports/${id}/flag`,{method:'POST',headers:await authHeaders(true),body:'{}'});
