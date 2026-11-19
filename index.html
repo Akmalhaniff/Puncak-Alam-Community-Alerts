@@ -63,7 +63,7 @@
     .filter{border:1px solid var(--line);background:white;border-radius:99px;padding:7px 11px;color:#63716d;font-size:11px;font-weight:700;white-space:nowrap}
     .filter.active{background:#173c38;color:#fff;border-color:#173c38}
     .feed{padding:0 14px 14px;display:flex;flex-direction:column;gap:9px;max-height:500px;overflow-y:auto}
-    .report{border:1px solid var(--line);border-radius:15px;padding:13px 14px;display:grid;grid-template-columns:10px 1fr auto;gap:11px;align-items:start}
+    .report{border:1px solid var(--line);border-radius:15px;padding:12px 13px;display:grid;grid-template-columns:10px 1fr;gap:10px;align-items:start}
     .report-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;background:#e1a23f;box-shadow:0 0 0 4px #e1a23f20}
     .report-dot.danger{background:#dc7259;box-shadow:0 0 0 4px #dc725920}
     .report-dot.clear{background:#4b9b76;box-shadow:0 0 0 4px #4b9b7620}
@@ -148,8 +148,28 @@
     .photo-preview{display:flex;align-items:center;gap:8px}
     .photo-preview img{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
     /* ---- photos in reports ---- */
-    .report-photo{display:block;margin-top:8px;width:fit-content}
-    .report-photo img{display:block;width:100%;max-width:260px;max-height:200px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#eef1ea}
+    .report-body{min-width:0}
+    .report-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .report-head .report-tag{flex:none}
+    .report-main{display:flex;gap:10px;align-items:flex-start;margin-top:5px}
+    .report-text{flex:1;min-width:0}
+    .report .report-details{margin:4px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+    .report .report-details.open{display:block;-webkit-line-clamp:unset}
+    .report-photo{flex:none;display:block}
+    .report-photo img{display:block;width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#eef1ea}
+    .report-actions{display:flex;flex-wrap:nowrap;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
+    .report-actions::-webkit-scrollbar{display:none}
+    .act{flex:none;border:1px solid var(--line);background:#f6f8f3;color:#3c5a52;border-radius:9px;padding:6px 10px;font-size:11px;font-weight:750;white-space:nowrap}
+    .act:hover{background:#eaf1ea}
+    .act b{font-weight:800;margin-left:2px}
+    .act.good{background:#e8f5ed;border-color:#cfe6d8;color:#28694f}
+    .act.wa{background:#e9f8ef;border-color:#c9ecd6;color:#1d7a46}
+    .act.flag{background:#fff;border-color:#eadad6;color:#9a5a4e}
+    .act.danger{background:#fff0ee;border-color:#f1d3cf;color:#a2453b}
+    .act.done{background:#eef3ee;color:#6d7b76;cursor:default}
+    .act.more{padding:4px 12px;font-size:16px;line-height:1;letter-spacing:1px}
+    .act.more.on{background:#173c38;color:#fff;border-color:#173c38}
+    .act-menu{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
     .popup-photo{display:block;width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-bottom:6px}
     /* ---- footer ---- */
     .site-footer{max-width:1200px;margin:0 auto;padding:22px 24px 34px;text-align:center;color:#6d7b76}
@@ -180,7 +200,7 @@
     .level-pick span b{font-size:11px;font-weight:700;color:#3c5a52}
     .level-pick input:checked + span{border-color:#c2452f;background:#fff0ee;box-shadow:0 0 0 2px #c2452f33}
     .level-pick input:focus-visible + span{outline:2px solid #5d9b82}
-    .level-chip{display:inline-block;margin-top:6px;border-radius:7px;background:#fff0ee;color:#a2453b;font-size:11px;font-weight:800;padding:3px 8px}
+    .level-chip{display:inline-block;margin-top:2px;border-radius:7px;background:#fff0ee;color:#a2453b;font-size:11px;font-weight:800;padding:3px 8px}
     .confirm-count{display:inline-block;margin-left:6px;font-size:11px;color:#2a7a58;font-weight:700}
     .mini-btn.wa{background:#e9f8ef;border-color:#c9ecd6;color:#1d7a46}
     .mini-btn.flag{background:#fff;border-color:#eadad6;color:#9a5a4e}
@@ -228,6 +248,14 @@
       .report-meta{font-size:11px}
       .report p{font-size:13px}
       .mini-btn{padding:8px 12px;font-size:12px;border-radius:9px}
+      .act{padding:8px 8px;font-size:12px;min-height:36px}
+      .report-actions{gap:5px}
+      /* keep one row on phones: the map button is just 📍, and buttons with a count show icon + number */
+      .act[data-act=focus] .lbl,.act.has-n .lbl{display:none}
+      .act[data-act=focus]{padding:8px 11px}
+      .act.more{padding:6px 12px;font-size:17px;margin-left:auto}
+      .report{gap:8px}
+      .report-photo img{width:72px;height:72px}
       .older-toggle{padding:13px;font-size:12px}
       .bottom-note{font-size:11px;margin-top:14px}
       .maplibregl-popup-content{max-width:220px}
@@ -249,7 +277,6 @@
       .tools{margin:-4px 0 12px}
       .tool-btn{flex:1;justify-content:center;padding:11px 10px;font-size:12px}
       .level-pick span{font-size:22px;padding:10px 4px}
-      .report-photo img{max-width:100%;max-height:240px}
       .site-footer{padding:6px 16px calc(96px + env(safe-area-inset-bottom))}
       .shell{padding-bottom:12px}
     }
@@ -475,6 +502,7 @@
         cancel: 'Batal', send: 'Hantar laporan', sending: 'Sedang hantar…',
         tag_danger: 'Banjir', tag_uncertain: 'Belum pasti', tag_clear: 'Boleh lalu', tag_later_clear: 'Dah surut', tag_other: 'Laporan',
         act_map: 'Lihat di peta', act_clear: 'Dah surut', act_remove: 'Padam',
+        act_map_s: 'Peta', act_confirm_s: 'Nampak', act_clear_s: 'Surut', act_more: 'Lagi: kongsi, lapor salah', tap_more: 'Tekan untuk baca penuh',
         by: 'oleh {who}', anon: 'Penduduk', approx: 'tempat anggaran', verified: 'Dihantar semasa log masuk', photo_alt: 'Gambar dari laporan',
         age_now: 'baru tadi', age_min: '{n} minit lalu', age_hr: '{n} jam lalu', age_day: '{n} hari lalu',
         empty: 'Tiada laporan dalam 24 jam lepas. Nampak banjir? Laporkan.',
@@ -572,6 +600,7 @@
         cancel: 'Cancel', send: 'Send report', sending: 'Sending…',
         tag_danger: 'Flooded', tag_uncertain: 'Not sure yet', tag_clear: 'Clear', tag_later_clear: 'Now clear', tag_other: 'Report',
         act_map: 'Show on map', act_clear: 'Now clear', act_remove: 'Delete',
+        act_map_s: 'Map', act_confirm_s: 'Seen it', act_clear_s: 'Clear', act_more: 'More: share, report a problem', tap_more: 'Tap to read it all',
         by: 'by {who}', anon: 'Community member', approx: 'approximate spot', verified: 'Posted while signed in', photo_alt: 'Photo from the report',
         age_now: 'just now', age_min: '{n} min ago', age_hr: '{n} hr ago', age_day: '{n} days ago',
         empty: 'No reports in the last 24 hours. Seen a flood? Report it.',
@@ -983,28 +1012,39 @@
       let html='';
       if(loadError)html+=`<div class="feed-error" role="alert">${t('load_error')}</div>`; // trusted string from STR
       html+=list.map(r=>{
+        const id=esc(r.id);
         const later=supersededBy(r);
         const faded=ageMs(r)>FADE_AFTER||!!later;
+        const open=r.status!=='clear'&&!later;
         const tag=later?`<span class="report-tag clear">${esc(t('tag_later_clear'))}</span>`:`<span class="report-tag ${esc(r.status)}">${esc(t(tagKey[r.status]||'tag_other'))}</span>`;
-        const actions=[`<button class="mini-btn" type="button" data-act="focus" data-id="${esc(r.id)}">${esc(t('act_map'))}</button>`];
-        if(r.status!=='clear'&&!later){
-          const done=confirmedIds.has(r.id);
-          actions.push(`<button class="mini-btn${done?' done':''}" type="button" data-act="confirm" data-id="${esc(r.id)}"${done?' disabled':''}>${esc(t(done?'act_confirmed':'act_confirm'))}</button>`);
+
+        // One row of the main actions; the rest live behind "⋯".
+        const actions=[`<button class="act" type="button" data-act="focus" data-id="${id}" aria-label="${esc(t('act_map'))}" title="${esc(t('act_map'))}">📍<span class="lbl"> ${esc(t('act_map_s'))}</span></button>`];
+        if(open){
+          const done=confirmedIds.has(r.id), n=r.confirmCount||0;
+          actions.push(`<button class="act${done?' done':''}${n?' has-n':''}" type="button" data-act="confirm" data-id="${id}" aria-label="${esc(t(done?'act_confirmed':'act_confirm'))}"${done?' disabled':''}>👍<span class="lbl"> ${esc(t('act_confirm_s'))}</span>${n?` <b>${n}</b>`:''}</button>`);
         }
-        if(r.status!=='clear'&&!later&&r.type!=='weather'){
+        if(open&&r.type!=='weather'){
           const n=r.clearVotes||0, voted=clearVotedIds.has(r.id);
           const label=voted?t('act_clear_voted',{n}):n>0?t('act_clear_n',{n}):t('act_clear');
-          actions.push(`<button class="mini-btn good${voted?' done':''}" type="button" data-act="clear" data-id="${esc(r.id)}"${voted?' disabled':''}>${esc(label)}</button>`);
+          actions.push(`<button class="act good${voted?' done':''}${n?' has-n':''}" type="button" data-act="clear" data-id="${id}" aria-label="${esc(label)}"${voted?' disabled':''}>✅<span class="lbl"> ${esc(t('act_clear_s'))}</span>${n?` <b>${n}/3</b>`:''}</button>`);
         }
-        actions.push(`<button class="mini-btn wa" type="button" data-act="share" data-id="${esc(r.id)}">${esc(t('act_share'))}</button>`);
+        actions.push(`<button class="act more" type="button" data-act="more" data-id="${id}" aria-expanded="false" aria-label="${esc(t('act_more'))}">⋯</button>`);
         const flagged=flaggedIds.has(r.id);
-        actions.push(`<button class="mini-btn flag${flagged?' done':''}" type="button" data-act="flag" data-id="${esc(r.id)}"${flagged?' disabled':''}>${esc(t(flagged?'act_flagged':'act_flag'))}</button>`);
-        if(canRemove(r))actions.push(`<button class="mini-btn danger" type="button" data-act="remove" data-id="${esc(r.id)}">${esc(t('act_remove'))}</button>`);
+        const menu=`<div class="act-menu" hidden>`
+          +`<button class="act wa" type="button" data-act="share" data-id="${id}">💬 ${esc(t('act_share'))}</button>`
+          +`<button class="act flag${flagged?' done':''}" type="button" data-act="flag" data-id="${id}"${flagged?' disabled':''}>${esc(t(flagged?'act_flagged':'act_flag'))}</button>`
+          +(canRemove(r)?`<button class="act danger" type="button" data-act="remove" data-id="${id}">🗑️ ${esc(t('act_remove'))}</button>`:'')
+          +`</div>`;
+
         const photo=r.hasPhoto?`<a class="report-photo" href="${photoUrl(r.id,true)}" target="_blank" rel="noopener"><img src="${photoUrl(r.id)}" alt="${esc(t('photo_alt'))}" loading="lazy"></a>`:'';
         const verified=r.userId!=null?` <span class="verified" title="${esc(t('verified'))}">✓</span>`:'';
         const level=r.waterLevel?`<span class="level-chip">${LEVEL_ICON[r.waterLevel]||''} ${esc(t('lvl_long_'+r.waterLevel))}</span>`:'';
-        const confirms=r.confirmCount?`<span class="confirm-count">· ${esc(t('confirm_count',{n:r.confirmCount}))}</span>`:'';
-        return `<article class="report${faded?' faded':''}" id="report-${esc(r.id)}"><span class="report-dot ${esc(r.status)}"></span><div><div class="report-title">${esc(r.area)}</div><div class="report-meta">${esc(fmtTime(r.time))} · ${esc(ageLabel(r.time))} · ${esc(t('by',{who:whoName(r)}))}${verified}${confirms}</div>${level}<p>${esc(r.details)}</p>${photo}<div class="report-actions">${actions.join('')}</div></div>${tag}</article>`;
+        return `<article class="report${faded?' faded':''}" id="report-${id}"><span class="report-dot ${esc(r.status)}"></span><div class="report-body">`
+          +`<div class="report-head"><div class="report-title">${esc(r.area)}</div>${tag}</div>`
+          +`<div class="report-meta">${esc(fmtTime(r.time))} · ${esc(ageLabel(r.time))} · ${esc(t('by',{who:whoName(r)}))}${verified}</div>`
+          +`<div class="report-main"><div class="report-text">${level}<p class="report-details" data-act="expand" title="${esc(t('tap_more'))}">${esc(r.details)}</p></div>${photo}</div>`
+          +`<div class="report-actions">${actions.join('')}</div>${menu}</div></article>`;
       }).join('');
       if(!list.length&&!loadError)html+=`<div class="empty">${esc(t('empty'))}</div>`;
       if(older)html+=`<button type="button" class="older-toggle" data-act="older">${esc(showOlder?t('older_hide'):t('older_show',{n:older}))}</button>`;
@@ -1083,6 +1123,12 @@
 
     document.getElementById('feed').addEventListener('click',e=>{
       const b=e.target.closest('[data-act]');if(!b)return;
+      if(b.dataset.act==='more'){
+        const menu=b.closest('.report').querySelector('.act-menu');
+        menu.hidden=!menu.hidden;b.setAttribute('aria-expanded',String(!menu.hidden));b.classList.toggle('on',!menu.hidden);
+        return;
+      }
+      if(b.dataset.act==='expand'){b.classList.toggle('open');return}
       const id=Number(b.dataset.id);
       ({focus:()=>focusReport(id),clear:()=>markClear(id),remove:()=>removeReport(id),confirm:()=>confirmReport(id),share:()=>shareReport(id),flag:()=>flagReport(id),retry:fetchReports,older:()=>{showOlder=!showOlder;renderReports()}})[b.dataset.act]?.();
     });
