@@ -8,74 +8,446 @@
   <meta name="description" content="A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam." />
   <meta property="og:title" content="Puncak Alam Community Alerts" />
   <meta property="og:description" content="A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam." />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous" />
   <style>
     :root{--ink:#122b2b;--muted:#71807c;--paper:#f5f6f0;--white:#fff;--line:#e5e9e1;--green:#1e6658;--green2:#dff1e7;--lime:#d3ef72;--orange:#e87947;--orangebg:#fff0e7;--red:#b9493e;--redbg:#fff0ee;--blue:#e9f1f2;--shadow:0 16px 48px #17333112;--radius:22px}
     *{box-sizing:border-box} body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45} button,input,select,textarea{font:inherit} button{cursor:pointer}
-    .top{background:#102b2c;color:#f7f8f1;padding:15px max(24px,calc((100vw - 1200px)/2));display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:11px;font-weight:750;letter-spacing:-.03em}.brand-mark{width:38px;height:38px;border-radius:13px;background:var(--lime);display:grid;place-items:center;color:#133735}.brand-mark svg{width:23px}.brand span small{display:block;color:#a9beb5;font-size:10px;font-weight:550;letter-spacing:.13em;text-transform:uppercase;margin-top:1px}.top-right{display:flex;align-items:center;gap:13px;color:#d1ddd8;font-size:12px}.demo-pill{border:1px solid #49635c;border-radius:99px;padding:7px 11px;color:#e3f2d2;font-size:11px;font-weight:700;letter-spacing:.07em}.pulse{width:7px;height:7px;background:#9bd98c;display:inline-block;border-radius:50%;margin-right:6px;box-shadow:0 0 0 4px #9bd98c22}
-    .shell{max-width:1200px;margin:auto;padding:32px 24px 60px}.welcome{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;margin-bottom:22px}.eyebrow{color:var(--green);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}.welcome h1{font-size:clamp(30px,4vw,43px);letter-spacing:-.055em;line-height:1.03;margin:7px 0 10px}.welcome p{color:#657572;margin:0;font-size:15px}.actions{display:flex;gap:9px;flex-wrap:wrap}.btn{border:0;border-radius:12px;background:var(--green);color:white;padding:12px 16px;font-weight:700;font-size:13px;box-shadow:0 5px 14px #1e665822;transition:.18s}.btn:hover{transform:translateY(-1px);background:#174f44}.btn.secondary{background:#fff;color:var(--ink);box-shadow:none;border:1px solid var(--line)}.btn.secondary:hover{background:#f8faf6}.btn.urgent{background:var(--red);box-shadow:0 5px 14px #b9493e25}.btn.small{font-size:12px;padding:9px 12px;border-radius:10px}
-    .notice{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;background:#fff9e7;border:1px solid #f0e7c9;color:#5b563d;border-radius:15px;font-size:12px;margin-bottom:20px}.notice b{color:#433e25}.notice-icon{font-size:17px;line-height:1.1}
-    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.stat{background:white;border:1px solid var(--line);border-radius:18px;padding:15px 17px;display:flex;align-items:center;justify-content:space-between;min-height:88px}.stat-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#75827e}.stat strong{display:block;font-size:22px;letter-spacing:-.04em;margin-top:3px}.stat small{display:block;color:#8a9690;font-size:11px;margin-top:1px}.stat-icon{width:37px;height:37px;border-radius:12px;display:grid;place-items:center;font-size:17px;background:#edf5e5}.stat.alert .stat-icon{background:var(--orangebg)}.stat.safe .stat-icon{background:var(--green2)}.stat.needs .stat-icon{background:#f2efff}
-    .layout{display:block}.panel{background:white;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}.panel-head{padding:20px 21px 15px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.panel-head h2{margin:0;font-size:17px;letter-spacing:-.025em}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:12px}.live-label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#638079;white-space:nowrap}.live-label i{background:#64b78e;width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:1px}
-    .map{height:390px;margin:0 16px 10px;border-radius:17px;position:relative;overflow:hidden;background:#e6eee5}.map iframe{width:100%;height:100%;display:block;border:0}.map-caption{position:absolute;z-index:2;left:13px;bottom:12px;padding:6px 9px;background:#fff;border-radius:8px;font-size:10px;font-weight:700;box-shadow:0 2px 10px #142b2b18;pointer-events:none}.map-pin-hint{font-size:10px;color:#667670;margin:0 20px 14px}.map-pin-hint a{color:#276653;font-weight:700}.show-map{border:0;background:#eef5f0;color:#2a6b53;padding:6px 9px;border-radius:8px;font-size:10px;font-weight:750;margin-top:9px}.show-map:hover{background:#dceee2}
-    .filters{display:flex;gap:7px;padding:0 20px 13px;overflow-x:auto}.filter{border:1px solid var(--line);background:white;border-radius:99px;padding:7px 11px;color:#63716d;font-size:11px;font-weight:700;white-space:nowrap}.filter.active{background:#173c38;color:#fff;border-color:#173c38}
-    .feed{padding:0 14px 14px;display:flex;flex-direction:column;gap:9px}.report{border:1px solid var(--line);border-radius:15px;padding:13px 14px;display:grid;grid-template-columns:10px 1fr auto;gap:11px;align-items:start}.report-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;background:#e1a23f;box-shadow:0 0 0 4px #e1a23f20}.report-dot.danger{background:#dc7259;box-shadow:0 0 0 4px #dc725920}.report-dot.clear{background:#4b9b76;box-shadow:0 0 0 4px #4b9b7620}.report-title{font-weight:750;font-size:13px;letter-spacing:-.01em}.report-meta{font-size:10px;color:#7d8984;margin-top:3px}.report p{font-size:12px;color:#52615d;margin:6px 0 0}.report-tag{border-radius:7px;background:#fff1e9;color:#a55435;font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;padding:5px 7px;white-space:nowrap}.report-tag.clear{background:#e8f5ed;color:#327451}.report-tag.uncertain{background:#fff7df;color:#816b29}.empty{padding:22px;text-align:center;color:var(--muted);font-size:13px}
-    .side{display:flex;flex-direction:column;gap:15px}.need-card{padding:0 17px 15px}.need{border:1px solid var(--line);border-radius:15px;padding:13px;margin-bottom:9px}.need-top{display:flex;justify-content:space-between;gap:9px;align-items:start}.need h3{font-size:13px;margin:0;letter-spacing:-.01em}.need p{font-size:11px;color:#6d7b76;margin:5px 0 10px}.need small{font-size:10px;color:#89948e}.need-status{font-size:9px;font-weight:800;color:#816b29;background:#fff7df;padding:5px 7px;border-radius:6px;white-space:nowrap;text-transform:uppercase}.need-actions{display:flex;align-items:center;justify-content:space-between}.help-btn{border:1px solid #cdded3;border-radius:9px;background:#f3faf5;color:#28694f;font-size:11px;font-weight:750;padding:7px 10px}.help-btn.taken{background:#1e6658;color:#fff;border-color:#1e6658}.board-foot{font-size:10px;color:#88958f;padding:3px 2px 0;line-height:1.5}
-    .contact-list{padding:0 17px 17px}.contact{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid #edf0ea}.contact:last-of-type{border-bottom:0}.contact-icon{width:34px;height:34px;border-radius:11px;background:#f2f4ee;display:grid;place-items:center;font-size:15px;flex:none}.contact-text{flex:1;min-width:0}.contact-text b{font-size:12px;display:block}.contact-text small{font-size:10px;color:#788680;display:block;margin-top:2px}.call{width:32px;height:32px;border:0;background:#e8f5ed;color:#28694f;border-radius:10px;font-size:15px;text-decoration:none;display:grid;place-items:center}.contact-extra{background:#f6f7f2;border-radius:10px;padding:8px 10px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;font-size:11px}.contact-extra button{border:0;background:none;color:var(--red);font-weight:700;font-size:11px}.source-links{display:flex;gap:8px;flex-wrap:wrap;padding:4px 0 0}.source-links a{font-size:10px;color:#276653;text-decoration:none;font-weight:700;border-bottom:1px solid #b7cfc3}.source-links a:hover{color:#143d34}
-    .bottom-note{color:#84908a;font-size:10px;text-align:center;margin:20px 0 0}.bottom-note a{color:#467064}
-    dialog{border:0;padding:0;border-radius:20px;width:min(520px,calc(100vw - 26px));box-shadow:0 22px 90px #0c202c55;color:var(--ink)}dialog::backdrop{background:#0d2221a8;backdrop-filter:blur(3px)}.modal-head{padding:19px 22px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:start}.modal-head h2{margin:0;font-size:18px}.modal-head p{margin:4px 0 0;color:var(--muted);font-size:12px}.x{border:0;background:#f2f4ee;border-radius:9px;width:31px;height:31px;color:#52615d;font-size:18px}.form{padding:18px 22px 22px;display:grid;gap:13px}.field label{display:block;font-size:11px;font-weight:750;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #dfe5dc;border-radius:10px;padding:10px 11px;outline:none;color:var(--ink);background:white;font-size:13px}.field input:focus,.field select:focus,.field textarea:focus{border-color:#5d9b82;box-shadow:0 0 0 3px #5d9b821c}.field textarea{min-height:78px;resize:vertical}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}.form-note{background:#fff8e6;border-radius:9px;padding:9px 10px;color:#706540;font-size:10px}.form-buttons{display:flex;justify-content:flex-end;gap:8px;margin-top:3px}
-    .toast{position:fixed;bottom:18px;left:50%;transform:translate(-50%,20px);opacity:0;background:#153a35;color:white;padding:11px 16px;border-radius:12px;font-size:12px;font-weight:650;box-shadow:var(--shadow);transition:.24s;z-index:10;pointer-events:none}.toast.show{opacity:1;transform:translate(-50%,0)}
-    @media(max-width:600px){.top{padding:12px 17px}.top-right>span:first-child{display:none}.shell{padding:24px 15px 42px}.welcome{align-items:flex-start;flex-direction:column}.welcome h1{font-size:34px}.actions{width:100%}.actions .btn{flex:1}.stats{gap:8px}.stat{padding:12px;min-height:78px}.stat strong{font-size:19px}.stat-icon{width:31px;height:31px}.map{height:320px;margin-left:11px;margin-right:11px}.panel-head{padding:17px 16px 13px}.feed{padding:0 10px 11px}.filters{padding-left:15px}.report{padding:11px;grid-template-columns:9px 1fr}.report-tag{grid-column:2;justify-self:start;grid-row:2}.report p{font-size:11px}.form-row{grid-template-columns:1fr}}
-    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+    .top{background:#102b2c;color:#f7f8f1;padding:15px max(24px,calc((100vw - 1200px)/2));display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .brand{display:flex;align-items:center;gap:11px;font-weight:750;letter-spacing:-.03em}
+    .brand-mark{width:38px;height:38px;border-radius:13px;background:var(--lime);display:grid;place-items:center;color:#133735}
+    .brand-mark svg{width:23px}
+    .brand span small{display:block;color:#a9beb5;font-size:10px;font-weight:550;letter-spacing:.13em;text-transform:uppercase;margin-top:1px}
+    .top-right{display:flex;align-items:center;gap:13px;color:#d1ddd8;font-size:12px}
+    .demo-pill{border:1px solid #49635c;border-radius:99px;padding:7px 11px;color:#e3f2d2;font-size:11px;font-weight:700;letter-spacing:.07em}
+    .pulse{width:7px;height:7px;background:#9bd98c;display:inline-block;border-radius:50%;margin-right:6px;box-shadow:0 0 0 4px #9bd98c22}
+    .auth-btn{background:#1e6658;color:white;border:1px solid #328272;padding:7px 12px;border-radius:10px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px}
+    .auth-btn:hover{background:#174f44}
+    .shell{max-width:1200px;margin:auto;padding:32px 24px 60px}
+    .welcome{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;margin-bottom:22px}
+    .eyebrow{color:var(--green);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}
+    .welcome h1{font-size:clamp(30px,4vw,43px);letter-spacing:-.055em;line-height:1.03;margin:7px 0 10px}
+    .welcome p{color:#657572;margin:0;font-size:15px}
+    .actions{display:flex;gap:9px;flex-wrap:wrap}
+    .btn{border:0;border-radius:12px;background:var(--green);color:white;padding:12px 16px;font-weight:700;font-size:13px;box-shadow:0 5px 14px #1e665822;transition:.18s}
+    .btn:hover{transform:translateY(-1px);background:#174f44}
+    .btn.secondary{background:#fff;color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+    .btn.secondary:hover{background:#f8faf6}
+    .btn.urgent{background:var(--red);box-shadow:0 5px 14px #b9493e25}
+    .btn.small{font-size:12px;padding:9px 12px;border-radius:10px}
+    .notice{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;background:#fff9e7;border:1px solid #f0e7c9;color:#5b563d;border-radius:15px;font-size:12px;margin-bottom:20px}
+    .notice b{color:#433e25}
+    .notice-icon{font-size:17px;line-height:1.1}
+    .layout{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}}
+    .panel{background:white;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .panel-head{padding:20px 21px 15px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .panel-head h2{margin:0;font-size:17px;letter-spacing:-.025em}
+    .panel-head p{margin:4px 0 0;color:var(--muted);font-size:12px}
+    .live-label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#638079;white-space:nowrap}
+    .live-label i{background:#64b78e;width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:1px}
+    .map{height:390px;margin:0 16px 14px;border-radius:17px;position:relative;overflow:hidden;background:#e6eee5}
+    .map-caption{position:absolute;z-index:1000;left:13px;bottom:12px;padding:6px 9px;background:#fff;border-radius:8px;font-size:10px;font-weight:700;box-shadow:0 2px 10px #142b2b18;pointer-events:none}
+    .signal-pin{width:29px;height:29px;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px #122b2b55;background:#dc7651}
+    .signal-pin::after{content:"";position:absolute;inset:7px;border-radius:50%;background:white}
+    .signal-pin.clear{background:#39836a}
+    .signal-pin.uncertain{background:#e4a23a}
+    .signal-pin.old{opacity:.7}
+    .map-pin-hint{font-size:10px;color:#667670;margin:0 20px 14px}
+    .filters{display:flex;gap:7px;padding:0 20px 13px;overflow-x:auto}
+    .filter{border:1px solid var(--line);background:white;border-radius:99px;padding:7px 11px;color:#63716d;font-size:11px;font-weight:700;white-space:nowrap}
+    .filter.active{background:#173c38;color:#fff;border-color:#173c38}
+    .feed{padding:0 14px 14px;display:flex;flex-direction:column;gap:9px;max-height:500px;overflow-y:auto}
+    .report{border:1px solid var(--line);border-radius:15px;padding:13px 14px;display:grid;grid-template-columns:10px 1fr auto;gap:11px;align-items:start}
+    .report-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;background:#e1a23f;box-shadow:0 0 0 4px #e1a23f20}
+    .report-dot.danger{background:#dc7259;box-shadow:0 0 0 4px #dc725920}
+    .report-dot.clear{background:#4b9b76;box-shadow:0 0 0 4px #4b9b7620}
+    .report-title{font-weight:750;font-size:13px;letter-spacing:-.01em}
+    .report-meta{font-size:10px;color:#7d8984;margin-top:3px}
+    .report p{font-size:12px;color:#52615d;margin:6px 0 0}
+    .report-tag{border-radius:7px;background:#fff1e9;color:#a55435;font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;padding:5px 7px;white-space:nowrap}
+    .report-tag.clear{background:#e8f5ed;color:#327451}
+    .report-tag.uncertain{background:#fff7df;color:#816b29}
+    .empty{padding:22px;text-align:center;color:var(--muted);font-size:13px}
+    .side{display:flex;flex-direction:column;gap:15px}
+    .ai-card{padding:18px;background:linear-gradient(135deg, #f0f7f4 0%, #e8f2ef 100%);border:1px solid #cce0d6;border-radius:var(--radius)}
+    .ai-card h3{margin:0 0 6px;font-size:15px;color:#133d35;display:flex;align-items:center;gap:8px}
+    .ai-card p{font-size:12px;color:#49635c;margin:0 0 12px}
+    .ai-input-row{display:flex;gap:8px}
+    .ai-input-row input{flex:1;border:1px solid #b8d2c6;border-radius:10px;padding:8px 11px;font-size:12px;background:white;outline:none}
+    .ai-result{margin-top:12px;padding:11px;background:white;border-radius:10px;font-size:12px;color:#2c3e3a;border:1px solid #d2e4dc;max-height:220px;overflow-y:auto}
+    .ai-links{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+    .ai-link-pill{background:#e2edeb;color:#174f44;font-size:10px;font-weight:700;padding:4px 8px;border-radius:6px;text-decoration:none}
+    .ai-link-pill:hover{background:#d2e4dc}
+    .bottom-note{color:#84908a;font-size:10px;text-align:center;margin:20px 0 0}
+    .bottom-note a{color:#467064}
+    dialog{border:0;padding:0;border-radius:20px;width:min(520px,calc(100vw - 26px));box-shadow:0 22px 90px #0c202c55;color:var(--ink)}
+    dialog::backdrop{background:#0d2221a8;backdrop-filter:blur(3px)}
+    .modal-head{padding:19px 22px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:start}
+    .modal-head h2{margin:0;font-size:18px}
+    .modal-head p{margin:4px 0 0;color:var(--muted);font-size:12px}
+    .x{border:0;background:#f2f4ee;border-radius:9px;width:31px;height:31px;color:#52615d;font-size:18px}
+    .form{padding:18px 22px 22px;display:grid;gap:13px}
+    .field label{display:block;font-size:11px;font-weight:750;margin-bottom:6px}
+    .field input,.field select,.field textarea{width:100%;border:1px solid #dfe5dc;border-radius:10px;padding:10px 11px;outline:none;color:var(--ink);background:white;font-size:13px}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:#5d9b82;box-shadow:0 0 0 3px #5d9b821c}
+    .field textarea{min-height:78px;resize:vertical}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+    .form-note{background:#fff8e6;border-radius:9px;padding:9px 10px;color:#706540;font-size:10px}
+    .form-buttons{display:flex;justify-content:flex-end;gap:8px;margin-top:3px}
+    .toast{position:fixed;bottom:18px;left:50%;transform:translate(-50%,20px);opacity:0;background:#153a35;color:white;padding:11px 16px;border-radius:12px;font-size:12px;font-weight:650;box-shadow:var(--shadow);transition:.24s;z-index:100;pointer-events:none}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
   </style>
 </head>
 <body>
+  <!-- Quota monitoring banner (Free tier limit reached notice) -->
+  <div id="quotaBanner" style="display:none;" class="bg-red-900 text-white px-4 py-3 text-xs md:text-sm text-center sticky top-0 z-50 shadow-md font-semibold">
+    <span>⚠️ Free daily community traffic limit reached. This free demo is temporarily paused due to high traffic. Please check back later!</span>
+  </div>
+
   <header class="top">
-    <div class="brand"><div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5 20 6v5.7c0 5-3.4 8.1-8 9.8-4.6-1.7-8-4.8-8-9.8V6l8-3.5Z" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 13.2c1.8-1.2 3.1-1.2 4.8 0 1.7 1.2 3.1 1.2 5 0M8.2 16.1c1.2-.8 2.2-.8 3.4 0 1.2.8 2.2.8 3.5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><span>Puncak Alam Community Alerts<small>Flood reports · Puncak Alam</small></span></div>
-    <div class="top-right"><span><i class="pulse"></i>Community board</span><span class="demo-pill">LOCAL DEMO</span></div>
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5 20 6v5.7c0 5-3.4 8.1-8 9.8-4.6-1.7-8-4.8-8-9.8V6l8-3.5Z" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 13.2c1.8-1.2 3.1-1.2 4.8 0 1.7 1.2 3.1 1.2 5 0M8.2 16.1c1.2-.8 2.2-.8 3.4 0 1.2.8 2.2.8 3.5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+      <span>Puncak Alam Community Alerts<small>Cloud SQL · Firebase Auth · Free Tier</small></span>
+    </div>
+    <div class="top-right">
+      <span><i class="pulse"></i>Community Board</span>
+      <div id="authContainer">
+        <button class="auth-btn" id="googleSignInBtn">Sign in with Google</button>
+      </div>
+    </div>
   </header>
+
   <main class="shell">
     <section class="welcome">
-      <div><div class="eyebrow">Puncak Alam · community reported</div><h1>See where water is rising.</h1><p>Map flood and road updates with a clear location and report time.</p></div>
-      <div class="actions"><button class="btn" id="reportOpen">＋ Report flooding or a road hazard</button></div>
-    </section>
-    <div class="notice"><span class="notice-icon">◉</span><div><b>Check the time and location before sharing.</b> These are community observations, not official or live alerts. Never drive or walk through floodwater. If anyone is in immediate danger, call <a href="tel:999">999</a>. Reports on this demo are stored only in this browser and are not shared with other residents.</div></div>
-    <section class="layout">
-      <div class="panel">
-        <div class="panel-head"><div><h2>Area signal board</h2><p>Street map and time-stamped community observations</p></div><span class="live-label"><i></i>Community reported</span></div>
-        <div class="map" id="map" aria-label="Interactive OpenStreetMap of Puncak Alam with a community report location"><iframe id="mapFrame" title="OpenStreetMap — Puncak Alam flood report location" loading="eager" referrerpolicy="strict-origin-when-cross-origin" src="https://www.openstreetmap.org/export/embed.html?bbox=101.400%2C3.195%2C101.480%2C3.255&amp;layer=mapnik&amp;marker=3.241%2C101.413"></iframe><span class="map-caption" id="mapCaption">Approximate area pin · Alam Suria–Jeram</span></div>
-        <p class="map-pin-hint">Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>. Pins are approximate. Select “Show on map” on a report to focus its area. If the map is still blocked, <a id="openMapLink" href="https://www.openstreetmap.org/#map=13/3.222/101.438" target="_blank" rel="noopener">open it directly ↗</a>.</p>
-        <div class="filters" role="group" aria-label="Filter reports"><button class="filter active" data-filter="all">All updates</button><button class="filter" data-filter="flood">Flood</button><button class="filter" data-filter="road">Roads</button><button class="filter" data-filter="weather">Rain & weather</button></div>
-        <div class="feed" id="feed"></div>
+      <div>
+        <div class="eyebrow">Puncak Alam · community reported</div>
+        <h1>See where water is rising.</h1>
+        <p>Map flood and road updates with PostgreSQL persistence and Google Sign-In.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" id="reportOpen">＋ Report flooding or a road hazard</button>
       </div>
     </section>
-    <p class="bottom-note">The sample reports are historical community observations from 18–19 Nov 2026; map pins are approximate. No members’ names or phone numbers are shown. For genuine emergencies, call <a href="https://www.malaysia.gov.my/en/topics/mers-999-emergency-line" target="_blank" rel="noopener">MERS 999</a>. Shared alerts need a hosted service to reach other residents.</p>
+
+    <div class="notice">
+      <span class="notice-icon">◉</span>
+      <div><b>Check the time and location before sharing.</b> These are community observations stored securely in Cloud SQL. Never drive or walk through floodwater. If anyone is in immediate danger, call <a href="tel:999">999</a>.</div>
+    </div>
+
+    <section class="layout">
+      <div class="panel">
+        <div class="panel-head">
+          <div><h2>Area signal board</h2><p>Street map and live PostgreSQL observations</p></div>
+          <span class="live-label"><i></i>Cloud Connected</span>
+        </div>
+        <div class="map" id="map" role="application" aria-label="Interactive Leaflet map of Puncak Alam">
+          <span class="map-caption">Pins show approximate areas · tap map to choose report point</span>
+        </div>
+        <p class="map-pin-hint">Map by OpenStreetMap. Tap map to choose a point for your next report.</p>
+        <div class="filters" role="group" aria-label="Filter reports">
+          <button class="filter active" data-filter="all">All updates</button>
+          <button class="filter" data-filter="flood">Flood</button>
+          <button class="filter" data-filter="road">Roads</button>
+          <button class="filter" data-filter="weather">Rain & weather</button>
+        </div>
+        <div class="feed" id="feed"></div>
+      </div>
+
+      <div class="side">
+        <div class="ai-card">
+          <h3>🤖 Puncak Alam AI Assistant</h3>
+          <p>Ask about weather, flood risks, or road conditions around Puncak Alam powered by Gemini & Maps Grounding.</p>
+          <div class="ai-input-row">
+            <input type="text" id="aiPromptInput" placeholder="e.g. Current weather and flood status in Fasa 1..." />
+            <button class="btn small" id="aiAskBtn">Ask AI</button>
+          </div>
+          <div id="aiResultContainer" style="display:none;"></div>
+        </div>
+      </div>
+    </section>
+
+    <p class="bottom-note">Reports are saved securely to Cloud SQL PostgreSQL. For genuine emergencies, call <a href="https://www.malaysia.gov.my/en/topics/mers-999-emergency-line" target="_blank" rel="noopener">MERS 999</a>.</p>
   </main>
-  <dialog id="reportDialog"><form class="modal" id="reportForm"><div class="modal-head"><div><h2>Report flooding or a road hazard</h2><p>Include the specific area and when you saw it.</p></div><button class="x" type="button" data-close aria-label="Close">×</button></div><div class="form"><div class="form-row"><div class="field"><label for="rArea">Area or road</label><input id="rArea" required maxlength="70" placeholder="e.g. Fasa 1, near traffic lights" /></div><div class="field"><label for="rType">Update type</label><select id="rType"><option value="flood">Flood / water level</option><option value="road">Road condition</option><option value="weather">Heavy rain</option></select></div></div><div class="form-row"><div class="field"><label for="rStatus">What are you seeing?</label><select id="rStatus"><option value="danger">Flooded / rising water</option><option value="uncertain">Use caution / not confirmed</option><option value="clear">Clear at this time</option></select></div><div class="field"><label for="rName">Name (optional)</label><input id="rName" maxlength="40" placeholder="Your first name" /></div></div><div class="field"><label for="rDetails">Short details</label><textarea id="rDetails" required maxlength="240" placeholder="Water level, landmark, direction of travel, or what changed…"></textarea></div><div class="form-note">Your report is timestamped when posted. Add a nearby junction or landmark so neighbours can find the spot. Do not post someone else’s phone number, home address, or an old photo as current. Reports stay in this browser demo.</div><div class="form-buttons"><button class="btn secondary" type="button" data-close>Cancel</button><button class="btn" type="submit">Post report</button></div></div></form></dialog>
+
+  <dialog id="reportDialog">
+    <form class="modal" id="reportForm">
+      <div class="modal-head">
+        <div><h2>Report flooding or a road hazard</h2><p>Include the specific area and when you saw it.</p></div>
+        <button class="x" type="button" data-close aria-label="Close">×</button>
+      </div>
+      <div class="form">
+        <div class="form-row">
+          <div class="field"><label for="rArea">Area or road</label><input id="rArea" required maxlength="70" placeholder="e.g. Fasa 1, near traffic lights" /></div>
+          <div class="field"><label for="rType">Update type</label><select id="rType"><option value="flood">Flood / water level</option><option value="road">Road condition</option><option value="weather">Heavy rain</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label for="rStatus">What are you seeing?</label><select id="rStatus"><option value="danger">Flooded / rising water</option><option value="uncertain">Use caution / not confirmed</option><option value="clear">Clear at this time</option></select></div>
+          <div class="field"><label for="rName">Name (optional)</label><input id="rName" maxlength="40" placeholder="Your name" /></div>
+        </div>
+        <div class="field">
+          <label>Map location</label>
+          <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+            <button class="btn secondary small" type="button" id="choosePin">Choose on map</button>
+            <span id="pinStatus" style="font-size:11px;color:#71807c">No pin selected</span>
+          </div>
+        </div>
+        <div class="field"><label for="rDetails">Short details</label><textarea id="rDetails" required maxlength="240" placeholder="Water level, landmark, direction of travel…"></textarea></div>
+        <div class="form-note">Your report is timestamped and stored in Cloud SQL.</div>
+        <div class="form-buttons">
+          <button class="btn secondary" type="button" data-close>Cancel</button>
+          <button class="btn" type="submit">Post report</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import firebaseConfig from './firebase-applet-config.json';
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    window._firebaseAuth = auth;
+    window._getIdToken = async () => {
+      const user = auth.currentUser;
+      if (!user) return null;
+      return await user.getIdToken();
+    };
+
+    const authContainer = document.getElementById('authContainer');
+    const rNameInput = document.getElementById('rName');
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        if (rNameInput && !rNameInput.value) {
+          rNameInput.value = user.displayName || user.email.split('@')[0];
+        }
+        authContainer.innerHTML = `
+          <div style="display:flex;align-items:center;gap:8px;">
+            <img src="${user.photoURL || ''}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'" />
+            <span style="font-size:12px;font-weight:600;color:#e3f2d2;">${user.displayName || user.email}</span>
+            <button class="auth-btn" id="googleSignOutBtn" style="background:#b9493e;border-color:#d76255;">Sign Out</button>
+          </div>
+        `;
+        document.getElementById('googleSignOutBtn').onclick = () => signOut(auth);
+      } else {
+        authContainer.innerHTML = `<button class="auth-btn" id="googleSignInBtn">Sign in with Google</button>`;
+        document.getElementById('googleSignInBtn').onclick = async () => {
+          try {
+            await signInWithPopup(auth, provider);
+            window._showToast('Signed in successfully.');
+          } catch (err) {
+            console.error('Sign-in error:', err);
+            window._showToast('Sign-in failed.');
+          }
+        };
+      }
+    });
+
+    document.getElementById('googleSignInBtn')?.addEventListener('click', async () => {
+      try {
+        await signInWithPopup(auth, provider);
+        window._showToast('Signed in successfully.');
+      } catch (err) {
+        console.error('Sign-in error:', err);
+        window._showToast('Sign-in failed.');
+      }
+    });
+  </script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
   <script>
-    const originalReports = [
-      {id:'c1',type:'road',status:'clear',area:'Persiaran Mokhtar Dahari',details:'Clear; ordinary traffic. Community update from the morning commute.',who:'Community member',time:'2026-11-19T09:18:00',timeLabel:'19 Nov · 9:18 am',latlng:[3.212,101.434],approximate:true},
-      {id:'c2',type:'road',status:'clear',area:'Avatar route',details:'Reported passable in both directions. Conditions may have changed since this post.',who:'Community member',time:'2026-11-19T06:19:00',timeLabel:'19 Nov · 6:19 am',latlng:[3.222,101.447],approximate:true},
-      {id:'c3',type:'flood',status:'danger',area:'Fasa 1 traffic-light junction',details:'Flooding reported at the junction; a later message suggested an alternate route. Treat this as an old observation.',who:'Community member',time:'2026-11-18T17:03:00',timeLabel:'18 Nov · 5:03 pm',latlng:[3.212,101.434],approximate:true},
-      {id:'c4',type:'flood',status:'danger',area:'Alam Suria–Jeram, before Simpang 4',details:'Reporter said water was around shin height and rising. This is a previous-day report.',who:'Community member',time:'2026-11-18T16:14:00',timeLabel:'18 Nov · 4:14 pm',latlng:[3.241,101.413],approximate:true},
-      {id:'c5',type:'weather',status:'uncertain',area:'Hillpark',details:'Heavy rain reported in the evening. No current water-level confirmation in the chat excerpt.',who:'Community member',time:'2026-11-18T21:38:00',timeLabel:'18 Nov · 9:38 pm',latlng:[3.211,101.462],approximate:true}
-    ];
-    const safeRead=(key,fallback)=>{try{const x=JSON.parse(localStorage.getItem(key));return Array.isArray(x)?x:fallback}catch{return fallback}};
-    let reports=safeRead('pa-reports',originalReports), currentFilter='all', mapFocusId=null;
-    const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const save=()=>localStorage.setItem('pa-reports',JSON.stringify(reports));
-    function ageLabel(iso){const mins=Math.max(0,Math.floor((Date.now()-new Date(iso).getTime())/60000));if(mins<1)return 'just now';if(mins<60)return `${mins} min ago`;const h=Math.floor(mins/60);if(h<24)return `${h} hr${h===1?'':'s'} ago`;const d=Math.floor(h/24);return `${d} day${d===1?'':'s'} ago`;}
+    let reports = [], currentFilter='all', mapInstance=null, reportsLayer=null, draftMarker=null, selectedCoordinates=null, waitingForPin=false;
+
+    const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),2600)}
-    function open(id){document.getElementById(id).showModal()}function close(){document.querySelectorAll('dialog[open]').forEach(d=>d.close())}
-    function reportCoords(r){if(Array.isArray(r.latlng))return r.latlng;const a=(r.area||'').toLowerCase();if(a.includes('hillpark'))return [3.211,101.462];if(a.includes('suria')||a.includes('jeram'))return [3.241,101.413];if(a.includes('avatar'))return [3.222,101.447];return [3.212,101.434];}
-    function mapEmbedUrl(r){const [lat,lon]=reportCoords(r),bbox=[lon-.025,lat-.018,lon+.025,lat+.018].map(n=>n.toFixed(4)).join(',');return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${lat},${lon}`;}
-    function focusReport(r,scroll=false){if(!r)return;mapFocusId=r.id;document.getElementById('mapFrame').src=mapEmbedUrl(r);const [lat,lon]=reportCoords(r);document.getElementById('mapCaption').textContent=`Approximate area pin · ${r.area}`;document.getElementById('openMapLink').href=`https://www.openstreetmap.org/#map=14/${lat}/${lon}`;if(scroll)document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'});}
-    function renderReports(){const feed=document.getElementById('feed');const filtered=reports.filter(r=>currentFilter==='all'||r.type===currentFilter).sort((a,b)=>new Date(b.time)-new Date(a.time));feed.innerHTML=filtered.length?filtered.map(r=>{const old=Date.now()-new Date(r.time).getTime()>2*3600000;const statusName={danger:'Flood reported',clear:'Clear · at report time',uncertain:'Needs confirmation'}[r.status]||'Community update';return `<article class="report"><span class="report-dot ${r.status}"></span><div><div class="report-title">${esc(r.area)}</div><div class="report-meta">${esc(r.timeLabel||new Date(r.time).toLocaleString())} · ${esc(ageLabel(r.time))}${old?' · older report':''}</div><p>${esc(r.details)}</p><button class="show-map" type="button" data-focus="${esc(r.id)}">Show on map ↗</button></div><span class="report-tag ${r.status}">${statusName}</span></article>`}).join(''):'<div class="empty">No reports in this filter. Share a location and time if you have a current update.</div>';feed.querySelectorAll('[data-focus]').forEach(b=>b.addEventListener('click',()=>{const r=reports.find(x=>x.id===b.dataset.focus);focusReport(r,true)}));let active=reports.find(r=>r.id===mapFocusId&&filtered.some(f=>f.id===r.id))||filtered[0];if(active)focusReport(active);}
-    document.getElementById('reportOpen').onclick=()=>open('reportDialog');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
+    window._showToast = toast;
+
+    function showQuotaLimitNotice(){
+      document.getElementById('quotaBanner').style.display = 'block';
+    }
+
+    function ageLabel(iso){const mins=Math.max(0,Math.floor((Date.now()-new Date(iso).getTime())/60000));if(mins<1)return 'just now';if(mins<60)return `${mins} min ago`;const h=Math.floor(mins/60);if(h<24)return `${h} hr${h===1?'':'s'} ago`;const d=Math.floor(h/24);return `${d} day${d===1?'':'s'} ago`;}
+    
+    async function fetchReports(){
+      try {
+        const res = await fetch('/api/reports');
+        if(res.status === 429 || res.status === 503){
+          showQuotaLimitNotice();
+          return;
+        }
+        if(res.ok){
+          reports = await res.json();
+          renderReports();
+          renderMapMarkers();
+        }
+      } catch(err){
+        console.warn('Failed to fetch reports from backend:', err);
+      }
+    }
+
+    function open(id){document.getElementById(id).showModal()}
+    function close(){document.querySelectorAll('dialog[open]').forEach(d=>d.close())}
+
+    function reportCoords(r){if(r.lat && r.lng)return [r.lat, r.lng];const a=(r.area||'').toLowerCase();if(a.includes('hillpark'))return [3.211,101.462];if(a.includes('suria')||a.includes('jeram'))return [3.241,101.413];if(a.includes('avatar'))return [3.222,101.447];return [3.212,101.434];}
+    function markerIcon(r){const old=Date.now()-new Date(r.time).getTime()>2*3600000;return L.divIcon({className:'',html:`<div class="signal-pin ${esc(r.status)}${old?' old':''}"></div>`,iconSize:[29,29],iconAnchor:[14,28],popupAnchor:[0,-27]})}
+    
+    function renderMapMarkers(){
+      if(!reportsLayer)return;
+      reportsLayer.clearLayers();
+      const shown=reports.filter(r=>currentFilter==='all'||r.type===currentFilter);
+      shown.forEach(r=>{
+        const popup=`<b>${esc(r.area)}</b><br/>${esc(new Date(r.time).toLocaleString())} · ${esc(ageLabel(r.time))}<br/>${esc(r.details)}<br/><small>PostgreSQL persisted · by ${esc(r.who)}</small>`;
+        L.marker(reportCoords(r),{icon:markerIcon(r)}).bindPopup(popup).addTo(reportsLayer);
+      });
+      if(draftMarker)draftMarker.addTo(mapInstance);
+    }
+
+    function setSelectedPoint(latlng){
+      selectedCoordinates=[Number(latlng.lat.toFixed(6)),Number(latlng.lng.toFixed(6))];
+      if(draftMarker)mapInstance.removeLayer(draftMarker);
+      draftMarker=L.marker(selectedCoordinates,{icon:L.divIcon({className:'',html:'<div class="signal-pin uncertain"></div>',iconSize:[29,29],iconAnchor:[14,28]})}).bindPopup('Selected point for your next report').addTo(mapInstance);
+      document.getElementById('pinStatus').textContent=`Map point selected · ${selectedCoordinates[0].toFixed(4)}, ${selectedCoordinates[1].toFixed(4)}`;
+      document.getElementById('pinStatus').style.color='#28694f';
+      renderMapMarkers();
+    }
+
+    function initMap(){
+      const el=document.getElementById('map');
+      if(!window.L){el.innerHTML='<div style="padding:22px;color:#52615d">Map library did not load.</div>';return}
+      mapInstance=L.map(el,{scrollWheelZoom:false}).setView([3.222,101.438],12);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>'}).addTo(mapInstance);
+      reportsLayer=L.layerGroup().addTo(mapInstance);
+      mapInstance.on('click',e=>{
+        setSelectedPoint(e.latlng);
+        if(waitingForPin){waitingForPin=false;open('reportDialog');toast('Map point added to your report.')}
+      });
+      fetchReports();
+    }
+
+    function renderReports(){
+      const feed=document.getElementById('feed');
+      const filtered=reports.filter(r=>currentFilter==='all'||r.type===currentFilter).sort((a,b)=>new Date(b.time)-new Date(a.time));
+      feed.innerHTML=filtered.length?filtered.map(r=>{
+        const old=Date.now()-new Date(r.time).getTime()>2*3600000;
+        const statusName={danger:'Flood reported',clear:'Clear · at report time',uncertain:'Needs confirmation'}[r.status]||'Community update';
+        return `<article class="report"><span class="report-dot ${r.status}"></span><div><div class="report-title">${esc(r.area)}</div><div class="report-meta">${esc(new Date(r.time).toLocaleString())} · ${esc(ageLabel(r.time))} · by ${esc(r.who)}</div><p>${esc(r.details)}</p></div><span class="report-tag ${r.status}">${statusName}</span></article>`
+      }).join(''):'<div class="empty">No reports in this filter. Share a location and time if you have a current update.</div>';
+      renderMapMarkers();
+    }
+
+    document.getElementById('reportOpen').onclick=()=>open('reportDialog');
+    document.querySelectorAll('[data-close]').forEach(b=>b.onclick=close);
+    document.getElementById('choosePin').onclick=()=>{close();waitingForPin=true;toast('Tap the map to select the report location.');document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'})};
     document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x===b));renderReports()});
-    document.getElementById('reportForm').onsubmit=e=>{e.preventDefault();const now=new Date();reports.unshift({id:crypto.randomUUID(),type:document.getElementById('rType').value,status:document.getElementById('rStatus').value,area:document.getElementById('rArea').value.trim(),details:document.getElementById('rDetails').value.trim(),who:document.getElementById('rName').value.trim()||'Community member',time:now.toISOString(),timeLabel:now.toLocaleDateString('en-MY',{day:'numeric',month:'short'})+' · '+now.toLocaleTimeString('en-MY',{hour:'numeric',minute:'2-digit'}),approximate:true});currentFilter='all';document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));save();renderReports();e.target.reset();close();toast('Report added to this browser’s map.');document.getElementById('feed').scrollIntoView({behavior:'smooth',block:'start'})};
+    
+    document.getElementById('reportForm').onsubmit=async e=>{
+      e.preventDefault();
+      const token = window._getIdToken ? await window._getIdToken() : null;
+      const payload={
+        type: document.getElementById('rType').value,
+        status: document.getElementById('rStatus').value,
+        area: document.getElementById('rArea').value.trim(),
+        details: document.getElementById('rDetails').value.trim(),
+        who: document.getElementById('rName').value.trim() || 'Community member',
+        lat: selectedCoordinates ? selectedCoordinates[0] : null,
+        lng: selectedCoordinates ? selectedCoordinates[1] : null,
+        approximate: !selectedCoordinates
+      };
+
+      try {
+        const headers={'Content-Type':'application/json'};
+        if(token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch('/api/reports',{method:'POST',headers,body:JSON.stringify(payload)});
+        if(res.status === 429 || res.status === 503){
+          showQuotaLimitNotice();
+          toast('Free quota limit reached.');
+          return;
+        }
+        if(res.ok){
+          const created = await res.json();
+          reports.unshift(created);
+          selectedCoordinates=null;
+          if(draftMarker){mapInstance.removeLayer(draftMarker);draftMarker=null}
+          renderReports();
+          e.target.reset();
+          document.getElementById('pinStatus').textContent='No pin selected';
+          close();
+          toast('Report saved to Cloud SQL database.');
+          document.getElementById('feed').scrollIntoView({behavior:'smooth',block:'start'});
+        } else {
+          toast('Failed to save report.');
+        }
+      } catch(err){
+        console.error('Error submitting report:', err);
+        toast('Network error submitting report.');
+      }
+    };
+
+    // AI Query handler with Maps Grounding
+    document.getElementById('aiAskBtn').onclick=async()=>{
+      const promptInput = document.getElementById('aiPromptInput');
+      const resultContainer = document.getElementById('aiResultContainer');
+      const query = promptInput.value.trim();
+      if(!query) return;
+
+      resultContainer.style.display='block';
+      resultContainer.innerHTML='<div style="color:#667670;font-style:italic;">Querying Gemini AI with Maps grounding...</div>';
+
+      try {
+        const res = await fetch('/api/ai/query',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({prompt: query, lat: 3.222, lng: 101.438})
+        });
+        if(res.status === 429 || res.status === 503){
+          showQuotaLimitNotice();
+          resultContainer.innerHTML='<div style="color:#b9493e;">Free traffic limit reached. Please check back later.</div>';
+          return;
+        }
+        if(res.ok){
+          const data = await res.json();
+          let html = `<div>${esc(data.text)}</div>`;
+          if(data.groundingChunks && data.groundingChunks.length > 0){
+            html += `<div class="ai-links">`;
+            data.groundingChunks.forEach(chunk=>{
+              if(chunk.maps && chunk.maps.uri){
+                html += `<a class="ai-link-pill" href="${esc(chunk.maps.uri)}" target="_blank" rel="noopener">📍 ${esc(chunk.maps.title || 'View on Maps')}</a>`;
+              }
+            });
+            html += `</div>`;
+          }
+          resultContainer.innerHTML = html;
+        } else {
+          resultContainer.innerHTML = `<div style="color:#b9493e;">Free traffic limit reached. Please check back later.</div>`;
+        }
+      } catch(err){
+        console.error('AI query error:', err);
+        resultContainer.innerHTML = `<div style="color:#b9493e;">Free traffic limit reached. Please check back later.</div>`;
+      }
+    };
+
+    // Quota monitoring global listeners (GHP compliance)
+    window.gm_authFailure = () => {
+      showQuotaLimitNotice();
+    };
+    const origError = console.error;
+    console.error = (...args) => {
+      origError.apply(console, args);
+      const msg = args.map(a => String(a)).join(' ');
+      if (msg.includes('OverQuotaMapError') || msg.includes('QuotaExceededError')) {
+        showQuotaLimitNotice();
+      }
+    };
+
     document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
-    renderReports();
+    initMap();
   </script>
 </body>
 </html>
