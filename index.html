@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#102b2c" />
   <title>Puncak Alam Community Alerts</title>
   <meta name="description" content="A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam." />
@@ -106,6 +106,87 @@
     .feed-error{padding:13px 14px;border-radius:13px;background:var(--redbg);color:#8d3a31;font-size:12px}
     .link-btn{border:0;background:none;padding:0;color:inherit;font-weight:800;text-decoration:underline}
     .field input:disabled{background:#f2f4ee;color:#52615d}
+    /* ---- flood-prone hotspots ---- */
+    .hotspot-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 20px 12px;flex-wrap:wrap}
+    .hs-toggle{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#3c5a52;cursor:pointer;user-select:none}
+    .hs-toggle input{width:16px;height:16px;accent-color:#c2452f;margin:0}
+    .hs-swatch{width:14px;height:14px;border-radius:50%;background:#e8603c33;border:2px solid #c2452f;flex:none}
+    .hs-hint{font-size:11px;color:#667670}
+    .hs-list-btn{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 11px;font-size:11px;font-weight:750;color:#3c5a52}
+    .hs-list-btn:hover{background:#f6f8f3}
+    .hs-list{margin:0 16px 14px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+    .hs-item{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid #eef1ea;background:#fff;padding:10px 12px;color:var(--ink)}
+    .hs-item:hover{background:#fbf6f4}
+    .hs-item b{font-size:12px}
+    .hs-item small{grid-column:1/-1;color:#6d7b76;font-size:11px}
+    .hs-days{font-size:10px;font-weight:800;color:#a2453b;background:#fff0ee;border-radius:6px;padding:3px 7px;white-space:nowrap}
+    .hs-bar{grid-column:1/-1;height:4px;border-radius:3px;background:#f3e2dd;overflow:hidden}
+    .hs-bar i{display:block;height:100%;background:#d9654a}
+    .hs-source{margin:0;padding:10px 12px;font-size:10px;color:#7d8984;background:#fafbf8}
+    .hs-popup b{display:block;font-size:13px;margin-bottom:2px}
+    .hs-popup .hs-days{display:inline-block;margin:3px 0}
+    .hs-popup small{display:block;color:#6d7b76;margin-top:3px}
+    .fab{display:none}
+
+    /* ---- phones ---- */
+    @media (max-width: 640px){
+      .top{padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));gap:10px}
+      .brand{gap:8px;font-size:14px;line-height:1.2}
+      .brand-mark{width:32px;height:32px;border-radius:10px}
+      .brand-mark svg{width:19px}
+      .top-right{gap:8px}
+      .top-right > span:first-child{display:none}
+      .auth-btn{padding:8px 10px;font-size:11px;white-space:nowrap}
+      .brand > span{font-size:13px}
+      .auth-user span{display:none}
+      .admin-link{padding:7px 9px;font-size:11px}
+      .shell{padding:16px 12px calc(96px + env(safe-area-inset-bottom))}
+      .welcome{display:block;margin-bottom:12px}
+      .eyebrow{font-size:10px}
+      .welcome h1{font-size:27px;margin:4px 0 6px}
+      .welcome p{font-size:13px}
+      .welcome .actions{display:none}
+      .notice{padding:10px 12px;font-size:11px;gap:9px;margin-bottom:12px;border-radius:12px}
+      .panel{border-radius:16px}
+      .panel-head{padding:14px 14px 10px}
+      .panel-head h2{font-size:16px}
+      .live-label{display:none}
+      .map{height:min(58vh,520px);min-height:300px;margin:0 8px 10px;border-radius:12px}
+      .map-caption{display:none}
+      .hotspot-bar{margin:0 12px 10px}
+      .hs-hint{display:none}
+      .hs-list{margin:0 8px 12px}
+      .hs-item{padding:12px}
+      .filters{padding:0 12px 12px;gap:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+      .filters::-webkit-scrollbar{display:none}
+      .filter{padding:9px 13px;font-size:12px}
+      .feed{max-height:none;overflow:visible;padding:0 8px 10px}
+      .report{grid-template-columns:9px 1fr;gap:4px 10px;padding:12px}
+      .report > div{grid-column:2}
+      .report-tag{grid-column:2;grid-row:1;justify-self:start;margin-bottom:2px}
+      .report-dot{grid-row:1/3}
+      .report-title{font-size:14px}
+      .report-meta{font-size:11px}
+      .report p{font-size:13px}
+      .mini-btn{padding:8px 12px;font-size:12px;border-radius:9px}
+      .older-toggle{padding:13px;font-size:12px}
+      .bottom-note{font-size:11px;margin-top:14px}
+      .maplibregl-popup-content{max-width:220px}
+      /* the report button stays within thumb reach */
+      .fab{display:flex;align-items:center;justify-content:center;gap:6px;position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;height:52px;border:0;border-radius:15px;background:var(--green);color:#fff;font-size:15px;font-weight:800;box-shadow:0 10px 28px #0d2a2655}
+      .fab:active{transform:scale(.98)}
+      .toast{bottom:calc(76px + env(safe-area-inset-bottom))}
+      /* report form as a bottom sheet */
+      dialog{width:100vw;max-width:100vw;max-height:92vh;margin:auto 0 0;border-radius:20px 20px 0 0;overflow:auto;padding-bottom:env(safe-area-inset-bottom)}
+      .modal-head{padding:16px 16px 12px;position:sticky;top:0;background:#fff;z-index:1}
+      .modal-head h2{font-size:17px}
+      .form{padding:14px 16px 16px;gap:12px}
+      .form-row{grid-template-columns:1fr}
+      .field input,.field select,.field textarea{font-size:16px;padding:12px}
+      .form-buttons{position:sticky;bottom:0;background:#fff;padding-top:8px}
+      .form-buttons .btn{flex:1;padding:14px}
+      #choosePin{padding:11px 14px}
+    }
   </style>
 </head>
 <body>
@@ -149,7 +230,12 @@
         <div class="map" id="map" role="application" aria-label="Interactive map of Puncak Alam">
           <span class="map-caption">Pins show approximate areas · tap map to choose report point</span>
         </div>
-        <p class="map-pin-hint">Tap the map to choose a point for your next report.</p>
+        <div class="hotspot-bar">
+          <label class="hs-toggle"><input type="checkbox" id="hsToggle" checked /><span class="hs-swatch" aria-hidden="true"></span>Flood-prone spots</label>
+          <span class="hs-hint">Tap the map to choose a point for your next report.</span>
+          <button type="button" class="hs-list-btn" id="hsListBtn" aria-expanded="false" aria-controls="hsList">See list</button>
+        </div>
+        <div class="hs-list" id="hsList" hidden></div>
         <div class="filters" role="group" aria-label="Filter reports">
           <button class="filter active" data-filter="all">All updates</button>
           <button class="filter" data-filter="flood">Flood</button>
@@ -196,6 +282,7 @@
     </form>
   </dialog>
 
+  <button class="fab" type="button" id="reportFab">＋ Report flooding</button>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <!-- Firebase SDKs -->
@@ -361,6 +448,75 @@
 
     // ----- map -----
 
+    // Flood-prone spots from the "UPDATE BANDAR PUNCAK ALAM" WhatsApp group (Apr 2025 – Nov 2026):
+    // days = number of separate days with flood messages about the spot. Locations are approximate.
+    const FLOOD_HOTSPOTS=[
+      {name:'Avatar (Jalan Bukit Cerakah)',lat:3.24649,lng:101.47193,days:27,note:'Most often reported. Cars reported submerged; usually floods after Paya Jaras and Sg Buloh.'},
+      {name:'Depan Proton',lat:3.24086,lng:101.44138,days:14,note:'Water rises here often; sometimes still passable.'},
+      {name:'Alam Suria / Simpang 4',lat:3.23543,lng:101.40706,days:12,note:'Knee-deep water reported.'},
+      {name:'LATAR Puncak Alam exit',lat:3.27346,lng:101.45929,days:11,note:'Flooding at the slip roads in and out of LATAR.'},
+      {name:'Daunan roundabout',lat:3.26205,lng:101.45191,days:10,note:'River overflows toward Ijok.'},
+      {name:'Paya Jaras (pasar malam)',lat:3.1997,lng:101.54617,days:9,note:'Floods early: a warning sign that Avatar may flood next.'},
+      {name:'Alam Jaya',lat:3.25373,lng:101.44533,days:9,note:'Repeated flood reports.'},
+      {name:'Alam Budiman',lat:3.14262,lng:101.47938,days:9,note:'Route out to Shah Alam; floods and jams together.'},
+      {name:'Kg Bukit Hijau (under LATAR)',lat:3.25604,lng:101.38092,days:8,note:'Low road under the highway.'},
+      {name:'Hillpark',lat:3.21458,lng:101.45654,days:7,note:'Repeated flood reports.'},
+      {name:'Persiaran Mokhtar Dahari',lat:3.22319,lng:101.45622,days:7,note:'Main road out; watch the Eco Grandeur stretch.'},
+      {name:'Alam Perdana',lat:3.25542,lng:101.45731,days:7,note:'Repeated flood reports.'},
+      {name:'Depan McD (Eco Grandeur)',lat:3.2217,lng:101.44787,days:6,note:'On the Nov 2026 list of flood spots.'},
+      {name:'Parit Mahang',lat:3.30856,lng:101.37849,days:6,note:'Deep water (knee-height) reported.'},
+      {name:'Eco Grandeur',lat:3.22413,lng:101.46826,days:5,note:'Repeated flood reports.'},
+      {name:'Ijok – Caledonia',lat:3.29458,lng:101.43576,days:1,note:'On the Nov 2026 list of flood spots.'},
+    ];
+    const HS_KEY='pa-show-hotspots';
+    let hsPopup=null;
+    function readPref(){try{return localStorage.getItem(HS_KEY)!=='0'}catch{return true}}
+    function writePref(v){try{localStorage.setItem(HS_KEY,v?'1':'0')}catch{}}
+
+    function hotspotPopupHtml(h){
+      return `<div class="hs-popup"><b>${esc(h.name)}</b><span class="hs-days">Flooded on ${h.days} day${h.days===1?'':'s'}</span><div>${esc(h.note)}</div><small>Known flood-prone spot from community reports, Apr 2025 – Nov 2026. Approximate location.</small></div>`;
+    }
+    function showHotspotPopup(h){
+      if(!mapInstance)return;
+      hsPopup?.remove();
+      hsPopup=new maplibregl.Popup({offset:12,closeButton:false,maxWidth:'240px'}).setLngLat([h.lng,h.lat]).setHTML(hotspotPopupHtml(h)).addTo(mapInstance);
+    }
+
+    function addHotspotLayers(){
+      if(!mapInstance||mapInstance.getSource('hotspots'))return;
+      mapInstance.addSource('hotspots',{type:'geojson',data:{type:'FeatureCollection',features:FLOOD_HOTSPOTS.map((h,i)=>({type:'Feature',properties:{i,days:h.days},geometry:{type:'Point',coordinates:[h.lng,h.lat]}}))}});
+      const visibility=readPref()?'visible':'none';
+      // Soft halo sized by how often the spot floods, plus a small solid centre.
+      mapInstance.addLayer({id:'hs-halo',type:'circle',source:'hotspots',layout:{visibility},paint:{
+        'circle-radius':['interpolate',['linear'],['zoom'],10,['+',6,['*',0.5,['get','days']]],15,['+',16,['*',1.6,['get','days']]]],
+        'circle-color':'#e8603c','circle-opacity':0.2,'circle-stroke-color':'#c2452f','circle-stroke-width':1.5,'circle-stroke-opacity':0.55}});
+      mapInstance.addLayer({id:'hs-core',type:'circle',source:'hotspots',layout:{visibility},paint:{
+        'circle-radius':['interpolate',['linear'],['zoom'],10,3,15,6],'circle-color':'#c2452f','circle-stroke-color':'#fff','circle-stroke-width':1.5}});
+      for(const id of ['hs-halo','hs-core']){
+        mapInstance.on('mouseenter',id,()=>{mapInstance.getCanvas().style.cursor='pointer'});
+        mapInstance.on('mouseleave',id,()=>{mapInstance.getCanvas().style.cursor=''});
+      }
+    }
+    function hotspotAt(point){
+      if(!mapInstance?.getLayer('hs-core')||mapInstance.getLayoutProperty('hs-core','visibility')==='none')return null;
+      const f=mapInstance.queryRenderedFeatures(point,{layers:['hs-core','hs-halo']})[0];
+      return f?FLOOD_HOTSPOTS[f.properties.i]:null;
+    }
+    function setHotspotsVisible(v){
+      writePref(v);
+      document.getElementById('hsToggle').checked=v;
+      if(!v)hsPopup?.remove();
+      for(const id of ['hs-halo','hs-core'])if(mapInstance?.getLayer(id))mapInstance.setLayoutProperty(id,'visibility',v?'visible':'none');
+    }
+    function renderHotspotList(){
+      const max=Math.max(...FLOOD_HOTSPOTS.map(h=>h.days));
+      document.getElementById('hsList').innerHTML=[...FLOOD_HOTSPOTS].sort((a,b)=>b.days-a.days).map(h=>{
+        const i=FLOOD_HOTSPOTS.indexOf(h);
+        return `<button type="button" class="hs-item" data-hs="${i}"><b>${esc(h.name)}</b><span class="hs-days">${h.days} day${h.days===1?'':'s'}</span><span class="hs-bar"><i style="width:${Math.round(h.days/max*100)}%"></i></span><small>${esc(h.note)}</small></button>`;
+      }).join('')+'<p class="hs-source">From flood messages in the community WhatsApp group "UPDATE BANDAR PUNCAK ALAM", Apr 2025 – Nov 2026. "Days" counts separate days the spot was reported flooded. Locations are approximate.</p>';
+    }
+
+
     function reportCoords(r){if(r.lat!=null&&r.lng!=null)return [r.lat,r.lng];const a=(r.area||'').toLowerCase();if(a.includes('hillpark'))return [3.211,101.462];if(a.includes('suria')||a.includes('jeram'))return [3.241,101.413];if(a.includes('avatar'))return [3.222,101.447];return [3.212,101.434];}
 
     function pinElement(status,faded){
@@ -410,9 +566,13 @@
       mapInstance=new maplibregl.Map({container:el,style:MAP_STYLE,center:[101.438,3.222],zoom:11.5,cooperativeGestures:true});
       mapInstance.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
       mapInstance.on('error',e=>console.warn('Map error:',e?.error||e));
+      mapInstance.on('load',addHotspotLayers);
       mapInstance.on('click',e=>{
         // Clicks on an existing pin open its popup; don't also treat them as a new point.
         if(e.originalEvent.target.closest('.pin-wrap'))return;
+        // Tapping a flood-prone spot shows its details, unless the user is picking a report location.
+        const hs=!waitingForPin&&hotspotAt(e.point);
+        if(hs){showHotspotPopup(hs);return}
         setSelectedPoint(e.lngLat.lat,e.lngLat.lng);
         if(waitingForPin){waitingForPin=false;openDialog('reportDialog');toast('Map point added to your report.')}
       });
@@ -485,6 +645,23 @@
     function closeDialog(){document.querySelectorAll('dialog[open]').forEach(d=>d.close())}
 
     document.getElementById('reportOpen').onclick=()=>openDialog('reportDialog');
+    document.getElementById('reportFab').onclick=()=>openDialog('reportDialog');
+    document.getElementById('hsToggle').checked=readPref();
+    document.getElementById('hsToggle').onchange=e=>setHotspotsVisible(e.target.checked);
+    renderHotspotList();
+    document.getElementById('hsListBtn').onclick=e=>{
+      const list=document.getElementById('hsList');list.hidden=!list.hidden;
+      e.currentTarget.setAttribute('aria-expanded',String(!list.hidden));
+      e.currentTarget.textContent=list.hidden?'See list':'Hide list';
+    };
+    document.getElementById('hsList').addEventListener('click',e=>{
+      const b=e.target.closest('[data-hs]');if(!b||!mapInstance)return;
+      const h=FLOOD_HOTSPOTS[Number(b.dataset.hs)];
+      setHotspotsVisible(true);
+      document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'});
+      mapInstance.flyTo({center:[h.lng,h.lat],zoom:Math.max(mapInstance.getZoom(),14)});
+      mapInstance.once('moveend',()=>showHotspotPopup(h));
+    });
     document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeDialog);
     document.getElementById('choosePin').onclick=()=>{closeDialog();waitingForPin=true;toast('Tap the map to select the report location.');document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'})};
     document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x===b));renderReports()});
