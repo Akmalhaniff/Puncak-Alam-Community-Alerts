@@ -23,6 +23,7 @@ export const reports = pgTable('reports', {
   lng: doublePrecision('lng'),
   approximate: boolean('approximate').default(true),
   waterLevel: text('water_level'), // 'ankle' | 'knee' | 'waist' | 'car' (flood reports only)
+  reviewed: boolean('reviewed').default(false), // admin checked it after flags; never auto-hidden again
   time: timestamp('time').defaultNow(),
   createdAt: timestamp('created_at').defaultNow(),
 });
@@ -43,6 +44,27 @@ export const reportConfirmations = pgTable('report_confirmations', {
   voterKey: text('voter_key').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => [primaryKey({ columns: [t.reportId, t.voterKey] })]);
+
+// "Report a problem" flags: one per voter per report. Enough flags hide the report until the admin reviews it.
+export const reportFlags = pgTable('report_flags', {
+  reportId: integer('report_id').notNull().references(() => reports.id, { onDelete: 'cascade' }),
+  voterKey: text('voter_key').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [primaryKey({ columns: [t.reportId, t.voterKey] })]);
+
+// Flood-prone spots shown on the map; edited by the admin.
+export const hotspots = pgTable('hotspots', {
+  id: serial('id').primaryKey(),
+  nameMs: text('name_ms').notNull(),
+  nameEn: text('name_en').notNull(),
+  noteMs: text('note_ms').notNull().default(''),
+  noteEn: text('note_en').notNull().default(''),
+  lat: doublePrecision('lat').notNull(),
+  lng: doublePrecision('lng').notNull(),
+  days: integer('days').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
 
 // Phones that asked to be told about floods within radius_km of a point.
 export const pushSubscriptions = pgTable('push_subscriptions', {

@@ -37,7 +37,7 @@
     .btn.danger{background:var(--red)}
     .btn.danger:hover{background:#9b3c33}
     .btn.small{font-size:11px;padding:7px 10px;border-radius:9px}
-    .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+    .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px}
     .card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:13px 15px}
     .card .label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#75827e}
     .card strong{display:block;font-size:22px;letter-spacing:-.03em;margin-top:2px}
@@ -69,6 +69,13 @@
     .pill.clear{background:#e8f5ed;color:#327451}
     .pill.type{background:#eef2ee;color:#4d6660}
     .row-actions{display:flex;gap:5px;white-space:nowrap}
+    .pill.flag{background:#fff0ee;color:#a2453b}
+    .pill.hidden-pill{background:#3b2b2a;color:#fff}
+    tr.flagged td{background:#fff8f6}
+    .hs-form .coords{display:grid;grid-template-columns:1fr 1fr 110px;gap:10px}
+    .hs-form .paste{display:flex;gap:8px}
+    .hs-form .paste input{flex:1}
+    .hint{font-size:11px;color:var(--muted);margin-top:4px}
     img.thumb{display:block;margin-top:6px;width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)}
     .empty{padding:28px;text-align:center;color:var(--muted);font-size:13px}
     .error{padding:13px 14px;background:var(--redbg);color:#8d3a31;font-size:12px}
@@ -95,6 +102,7 @@
     [hidden]{display:none!important}
     @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:700px){
+      .hs-form .coords{grid-template-columns:1fr 1fr}
       .top{padding:11px 14px}
       .top-right .who{display:none}
       .shell{padding:20px 14px 40px}
@@ -134,6 +142,7 @@
 
       <div class="tabs" role="tablist">
         <button class="tab active" type="button" data-tab="reports" role="tab">Reports</button>
+        <button class="tab" type="button" data-tab="hotspots" role="tab">Hotspots</button>
         <button class="tab" type="button" data-tab="users" role="tab">Users</button>
         <button class="tab" type="button" data-tab="maintenance" role="tab">Maintenance</button>
       </div>
@@ -142,7 +151,7 @@
         <div class="toolbar">
           <input type="search" id="q" placeholder="Search area, details, name or email…" aria-label="Search reports" />
           <select id="fType" aria-label="Type"><option value="">All types</option><option value="flood">Flood</option><option value="road">Road</option><option value="weather">Weather</option></select>
-          <select id="fStatus" aria-label="Status"><option value="">All statuses</option><option value="danger">Flooded</option><option value="uncertain">Needs confirmation</option><option value="clear">Clear</option></select>
+          <select id="fStatus" aria-label="Status"><option value="">All statuses</option><option value="danger">Flooded</option><option value="uncertain">Needs confirmation</option><option value="clear">Clear</option><option value="flagged">🚩 Flagged</option></select>
           <select id="fAge" aria-label="Age"><option value="">Any time</option><option value="24">Last 24 hours</option><option value="168">Last 7 days</option><option value="-168">Older than 7 days</option></select>
           <span class="spacer"></span>
           <span class="count" id="reportCount"></span>
@@ -152,6 +161,19 @@
         <table>
           <thead><tr><th class="check"><input type="checkbox" id="selectAll" aria-label="Select all shown" /></th><th>When</th><th>Report</th><th>Type / status</th><th>Posted by</th><th></th></tr></thead>
           <tbody id="reportRows"></tbody>
+        </table>
+      </div>
+
+      <div class="panel" id="tab-hotspots" hidden>
+        <div class="toolbar">
+          <span class="count" id="hotspotCount"></span>
+          <span class="spacer"></span>
+          <button class="btn small" type="button" id="addHotspot">＋ Add hotspot</button>
+        </div>
+        <div id="hotspotsError" class="error" hidden></div>
+        <table>
+          <thead><tr><th>Name</th><th>Note</th><th>Flood days</th><th>Location</th><th></th></tr></thead>
+          <tbody id="hotspotRows"></tbody>
         </table>
       </div>
 
@@ -197,6 +219,31 @@
     </form>
   </dialog>
 
+  <dialog id="hotspotDialog">
+    <form id="hotspotForm" class="hs-form">
+      <div class="modal-head"><h2 id="hotspotTitle">Hotspot</h2><button class="x" type="button" data-close aria-label="Close">×</button></div>
+      <div class="form">
+        <div class="form-row">
+          <div class="field"><label for="hNameMs">Name (BM)</label><input id="hNameMs" required maxlength="60" /></div>
+          <div class="field"><label for="hNameEn">Name (English)</label><input id="hNameEn" maxlength="60" placeholder="Same as BM if empty" /></div>
+        </div>
+        <div class="field"><label for="hNoteMs">Note (BM)</label><input id="hNoteMs" maxlength="200" placeholder="e.g. Pernah air paras lutut." /></div>
+        <div class="field"><label for="hNoteEn">Note (English)</label><input id="hNoteEn" maxlength="200" placeholder="Same as BM if empty" /></div>
+        <div class="field">
+          <label for="hLink">Google Maps link (optional)</label>
+          <div class="paste"><input id="hLink" placeholder="https://maps.app.goo.gl/…" /><button class="btn secondary small" type="button" id="hResolve">Use link</button></div>
+          <div class="hint">Paste a shared Google Maps link to fill in the location.</div>
+        </div>
+        <div class="coords">
+          <div class="field"><label for="hLat">Latitude</label><input id="hLat" required inputmode="decimal" /></div>
+          <div class="field"><label for="hLng">Longitude</label><input id="hLng" required inputmode="decimal" /></div>
+          <div class="field"><label for="hDays">Flood days</label><input id="hDays" required type="number" min="0" max="3650" step="1" /></div>
+        </div>
+        <div class="form-buttons"><button class="btn secondary" type="button" data-close>Cancel</button><button class="btn" type="submit">Save</button></div>
+      </div>
+    </form>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script type="module">
@@ -222,7 +269,7 @@
   <script>
     const HOUR = 3600000;
     const STATUS_LABEL = { danger: 'Flooded', uncertain: 'Needs confirmation', clear: 'Clear' };
-    let reports = [], users = [], selected = new Set(), editingId = null;
+    let reports = [], users = [], hotspotsList = [], selected = new Set(), editingId = null, editingHotspot = null;
 
     const $ = id => document.getElementById(id);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -278,7 +325,7 @@
     // ----- data -----
 
     async function loadAll() {
-      await Promise.all([loadHealth(), loadReports(), loadUsers()]);
+      await Promise.all([loadHealth(), loadReports(), loadUsers(), loadHotspots()]);
     }
 
     let health = null;
@@ -316,6 +363,18 @@
       renderUsers(); renderCards();
     }
 
+    async function loadHotspots() {
+      try {
+        hotspotsList = await api('/api/admin/hotspots');
+        $('hotspotsError').hidden = true;
+      } catch (err) {
+        hotspotsList = [];
+        $('hotspotsError').hidden = false;
+        $('hotspotsError').textContent = `Couldn't load hotspots: ${err.message}.`;
+      }
+      renderHotspots();
+    }
+
     // ----- rendering -----
 
     function renderCards() {
@@ -331,6 +390,7 @@
         { label: 'Last 24 hours', value: day.length, note: 'new reports' },
         { label: 'Flooded now', value: activeFloods, note: 'danger reports, last 24 h', cls: activeFloods ? 'bad' : '' },
         { label: 'Users', value: users.length, note: 'signed in at least once' },
+        { label: 'Flagged', value: reports.filter(r => r.flagCount > 0).length, note: `${reports.filter(r => r.hidden).length} hidden until you check`, cls: reports.some(r => r.hidden) ? 'bad' : '' },
       ];
       $('cards').innerHTML = cards.map(c => `<div class="card ${c.cls || ''}"><div class="label">${esc(c.label)}</div><strong>${esc(c.value)}</strong><small>${esc(c.note)}</small></div>`).join('');
     }
@@ -340,7 +400,8 @@
       const type = $('fType').value, status = $('fStatus').value, age = Number($('fAge').value);
       return reports.filter(r => {
         if (type && r.type !== type) return false;
-        if (status && r.status !== status) return false;
+        if (status === 'flagged') { if (!(r.flagCount > 0)) return false; }
+        else if (status && r.status !== status) return false;
         const hrs = (Date.now() - new Date(r.time)) / HOUR;
         if (age > 0 && hrs > age) return false;
         if (age < 0 && hrs <= -age) return false;
@@ -353,13 +414,13 @@
       const list = filteredReports();
       $('reportCount').textContent = `${list.length} of ${reports.length}`;
       $('reportRows').innerHTML = list.length ? list.map(r => `
-        <tr class="${selected.has(r.id) ? 'selected' : ''}">
+        <tr class="${selected.has(r.id) ? 'selected' : ''}${r.flagCount > 0 ? ' flagged' : ''}">
           <td class="check"><input type="checkbox" data-select="${r.id}" ${selected.has(r.id) ? 'checked' : ''} aria-label="Select report" /></td>
           <td class="meta">${esc(fmtTime(r.time))}<br/>${esc(ago(r.time))}</td>
           <td><div class="area">${esc(r.area)}</div><div class="details">${esc(r.details)}</div>${r.hasPhoto ? `<a href="/api/reports/${r.id}/photo?size=full" target="_blank" rel="noopener"><img class="thumb" src="/api/reports/${r.id}/photo" alt="Report photo" loading="lazy" /></a>` : ''}</td>
-          <td><span class="pill type">${esc(r.type)}</span> <span class="pill ${esc(r.status)}">${esc(STATUS_LABEL[r.status] || r.status)}</span></td>
+          <td><span class="pill type">${esc(r.type)}</span> <span class="pill ${esc(r.status)}">${esc(STATUS_LABEL[r.status] || r.status)}</span>${r.flagCount > 0 ? ` <span class="pill flag">🚩 ${esc(r.flagCount)}</span>` : ''}${r.hidden ? ' <span class="pill hidden-pill">Hidden</span>' : ''}</td>
           <td>${esc(r.who || '—')}${r.authorEmail ? `<div class="meta">${esc(r.authorEmail)}</div>` : '<div class="meta">not signed in</div>'}</td>
-          <td><div class="row-actions"><button class="btn secondary small" type="button" data-edit="${r.id}">Edit</button><button class="btn danger small" type="button" data-delete="${r.id}">Delete</button></div></td>
+          <td><div class="row-actions">${r.flagCount > 0 ? `<button class="btn small" type="button" data-keep="${r.id}" title="It's fine: clear flags and show it again">Keep</button>` : ''}<button class="btn secondary small" type="button" data-edit="${r.id}">Edit</button><button class="btn danger small" type="button" data-delete="${r.id}">Delete</button></div></td>
         </tr>`).join('') : `<tr><td colspan="6" class="empty">${reports.length ? 'No reports match these filters.' : 'No reports yet.'}</td></tr>`;
       const shownIds = list.map(r => r.id);
       $('selectAll').checked = shownIds.length > 0 && shownIds.every(id => selected.has(id));
@@ -377,6 +438,67 @@
           <td class="meta">${u.lastReport ? esc(ago(u.lastReport)) : '—'}</td>
           <td>${u.reportCount ? `<button class="btn danger small" type="button" data-user-purge="${u.id}">Delete their reports</button>` : ''}</td>
         </tr>`).join('') : '<tr><td colspan="6" class="empty">No signed-in users yet.</td></tr>';
+    }
+
+    function renderHotspots() {
+      $('hotspotCount').textContent = `${hotspotsList.length} hotspot${hotspotsList.length === 1 ? '' : 's'} on the map`;
+      $('hotspotRows').innerHTML = hotspotsList.length ? hotspotsList.map(h => `
+        <tr>
+          <td><div class="area">${esc(h.nameMs)}</div>${h.nameEn && h.nameEn !== h.nameMs ? `<div class="meta">${esc(h.nameEn)}</div>` : ''}</td>
+          <td><div class="details">${esc(h.noteMs)}</div></td>
+          <td>${esc(h.days)}</td>
+          <td class="meta"><a href="https://www.google.com/maps?q=${h.lat},${h.lng}" target="_blank" rel="noopener">${h.lat.toFixed(4)}, ${h.lng.toFixed(4)} ↗</a></td>
+          <td><div class="row-actions"><button class="btn secondary small" type="button" data-hs-edit="${h.id}">Edit</button><button class="btn danger small" type="button" data-hs-delete="${h.id}">Delete</button></div></td>
+        </tr>`).join('') : '<tr><td colspan="5" class="empty">No hotspots yet.</td></tr>';
+    }
+
+    function openHotspot(h) {
+      editingHotspot = h ? h.id : null;
+      $('hotspotTitle').textContent = h ? 'Edit hotspot' : 'Add hotspot';
+      $('hNameMs').value = h?.nameMs || ''; $('hNameEn').value = h && h.nameEn !== h.nameMs ? h.nameEn : '';
+      $('hNoteMs').value = h?.noteMs || ''; $('hNoteEn').value = h && h.noteEn !== h.noteMs ? h.noteEn : '';
+      $('hLat').value = h?.lat ?? ''; $('hLng').value = h?.lng ?? ''; $('hDays').value = h?.days ?? 1; $('hLink').value = '';
+      $('hotspotDialog').showModal();
+    }
+    $('addHotspot').onclick = () => openHotspot(null);
+    $('hResolve').onclick = async () => {
+      const url = $('hLink').value.trim(); if (!url) return;
+      try {
+        const { lat, lng } = await api('/api/admin/resolve-maps-link', { method: 'POST', body: { url } });
+        $('hLat').value = lat.toFixed(6); $('hLng').value = lng.toFixed(6);
+        toast('Location filled in from the link.');
+      } catch (err) { toast(err.message); }
+    };
+    $('hotspotForm').onsubmit = async e => {
+      e.preventDefault();
+      const body = { nameMs: $('hNameMs').value, nameEn: $('hNameEn').value, noteMs: $('hNoteMs').value, noteEn: $('hNoteEn').value, lat: Number($('hLat').value), lng: Number($('hLng').value), days: Number($('hDays').value) };
+      const submit = e.target.querySelector('[type=submit]'); submit.disabled = true;
+      try {
+        if (editingHotspot) await api(`/api/admin/hotspots/${editingHotspot}`, { method: 'PUT', body });
+        else await api('/api/admin/hotspots', { method: 'POST', body });
+        $('hotspotDialog').close();
+        toast(editingHotspot ? 'Hotspot updated.' : 'Hotspot added.');
+        await loadHotspots();
+      } catch (err) { toast(err.message); }
+      finally { submit.disabled = false; }
+    };
+    $('hotspotRows').addEventListener('click', async e => {
+      const editId = Number(e.target.dataset.hsEdit), delId = Number(e.target.dataset.hsDelete);
+      if (editId) openHotspot(hotspotsList.find(h => h.id === editId));
+      if (delId) {
+        const h = hotspotsList.find(x => x.id === delId);
+        if (!confirm(`Delete the hotspot "${h?.nameMs}"? It will disappear from the map.`)) return;
+        try { await api(`/api/admin/hotspots/${delId}`, { method: 'DELETE' }); toast('Hotspot deleted.'); await loadHotspots(); }
+        catch (err) { toast(err.message); }
+      }
+    });
+
+    async function keepReport(id) {
+      try {
+        await api(`/api/admin/reports/${id}/keep`, { method: 'POST' });
+        toast('Kept. Flags cleared and the report is visible again.');
+        await loadReports();
+      } catch (err) { toast(err.message); }
     }
 
     // ----- actions -----
@@ -411,13 +533,14 @@
       } catch (err) { toast(err.message); }
       finally { submit.disabled = false; }
     };
-    document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => $('editDialog').close());
+    document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
 
     $('reportRows').addEventListener('click', e => {
       const t = e.target;
       if (t.dataset.select) { const id = Number(t.dataset.select); t.checked ? selected.add(id) : selected.delete(id); renderReports(); }
       else if (t.dataset.edit) openEdit(Number(t.dataset.edit));
       else if (t.dataset.delete) deleteReports([Number(t.dataset.delete)]);
+      else if (t.dataset.keep) keepReport(Number(t.dataset.keep));
     });
     $('selectAll').onchange = e => { filteredReports().forEach(r => e.target.checked ? selected.add(r.id) : selected.delete(r.id)); renderReports(); };
     $('deleteSelected').onclick = () => deleteReports([...selected]);
@@ -449,7 +572,7 @@
 
     document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => {
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
-      for (const name of ['reports', 'users', 'maintenance']) $(`tab-${name}`).hidden = name !== tab.dataset.tab;
+      for (const name of ['reports', 'hotspots', 'users', 'maintenance']) $(`tab-${name}`).hidden = name !== tab.dataset.tab;
     });
   </script>
 </body>

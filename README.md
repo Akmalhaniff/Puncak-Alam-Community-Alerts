@@ -21,6 +21,9 @@ Residents pin a report on the map with the area, what they're seeing, and when. 
 - **Rain radar**: optional overlay from [RainViewer](https://www.rainviewer.com/) (free for small community use; credited on the map).
 - **Install as an app**: web app manifest, icons and a service worker (`sw.js`). Android/desktop show an install button; iPhone shows how to "Add to Home Screen".
 - **Flood alerts near me**: push notifications when a flood is reported within 2, 5 or 10 km of a chosen spot. On iPhone this works from the installed app (iOS 16.4+).
+- **Report a problem (🚩)**: anyone can flag a wrong, fake or unsuitable report. After 3 different people flag it, the report and its photo are hidden until the admin checks it (Admin → Reports → 🚩 Flagged → Keep or Delete).
+- **Link previews**: shared links show a proper preview in WhatsApp; a report link (`/?r=<id>`) shows that report's title, water level and photo.
+- **Hotspots**: the flood-prone spots on the map live in the database and are edited in Admin → Hotspots (paste a Google Maps link to fill in the location).
 - **Shared cache**: the report list is cached for 30 seconds on the server, so many viewers cost the database the same as one and Neon's free compute can sleep.
 - **Spam limits**: the server checks every report (known types and statuses only, length limits, map point must be near Puncak Alam). Each connection can post at most 5 reports or "now clear" updates per 10 minutes.
 
@@ -63,6 +66,14 @@ npm start
 
 Firebase project settings come from `firebase-applet-config.json`. These are public web-app values, not secrets.
 
+## Tests
+
+```sh
+npm test
+```
+
+Runs unit tests and API tests against the real server with an in-memory Postgres ([PGlite](https://pglite.dev/)), so no database account is needed. GitHub Actions runs the same on every push and pull request (`.github/workflows/ci.yml`).
+
 ## API
 
 | Method | Path | Notes |
@@ -71,6 +82,9 @@ Firebase project settings come from `firebase-applet-config.json`. These are pub
 | `POST` | `/api/reports` | Create a report. Rate-limited; a sign-in token is optional |
 | `POST` | `/api/reports/:id/clear` | Post a "now clear" follow-up. Rate-limited |
 | `DELETE` | `/api/reports/:id` | Author or the admin only; requires a sign-in token |
+| `POST` | `/api/reports/:id/confirm` | "I see it too" (one per person) |
+| `POST` | `/api/reports/:id/flag` | Report a problem (one per person; 3 hide the report) |
+| `GET` | `/api/hotspots` | Flood-prone spots shown on the map |
 | `GET` | `/api/me` | The signed-in user's id and admin flag |
 
 The server only serves `index.html` and `firebase-applet-config.json` to browsers. Server code, `src/` and `node_modules/` are never exposed.

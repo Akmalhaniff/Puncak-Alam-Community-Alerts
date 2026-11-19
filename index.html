@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#102b2c" />
   <title>Puncak Alam Community Alerts</title>
-  <meta name="description" content="A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam." />
-  <meta property="og:title" content="Puncak Alam Community Alerts" />
-  <meta property="og:description" content="A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam." />
+  <!--OG-->
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -175,6 +173,7 @@
     .level-chip{display:inline-block;margin-top:6px;border-radius:7px;background:#fff0ee;color:#a2453b;font-size:11px;font-weight:800;padding:3px 8px}
     .confirm-count{display:inline-block;margin-left:6px;font-size:11px;color:#2a7a58;font-weight:700}
     .mini-btn.wa{background:#e9f8ef;border-color:#c9ecd6;color:#1d7a46}
+    .mini-btn.flag{background:#fff;border-color:#eadad6;color:#9a5a4e}
     .mini-btn.done{background:#eef3ee;color:#6d7b76;cursor:default}
     .radar-time{font-size:11px;color:#667670}
 
@@ -481,6 +480,7 @@
         act_confirm: '👍 Saya pun nampak', act_confirmed: '👍 Dah sahkan', confirm_count: '{n} orang sahkan',
         t_confirmed: 'Terima kasih kerana sahkan!',
         act_share: 'Kongsi WhatsApp', share_view: 'Lihat peta:',
+        act_flag: '🚩 Lapor salah', act_flagged: '🚩 Dah dilapor', confirm_flag: 'Laporkan "{area}" sebagai salah, palsu atau tak sesuai? Admin akan semak.', t_flagged: 'Terima kasih. Admin akan semak laporan ini.',
         radar_toggle: 'Radar hujan', radar_time: 'Radar {time}', radar_fail: 'Radar hujan tak dapat dimuat sekarang.',
         install_btn: 'Pasang app', t_installed: 'App dipasang!',
         install_ios: 'Untuk pasang: tekan butang Kongsi (□↑) di Safari, kemudian pilih "Add to Home Screen".',
@@ -572,6 +572,7 @@
         act_confirm: '👍 I see it too', act_confirmed: '👍 Confirmed', confirm_count: '{n} confirmed',
         t_confirmed: 'Thanks for confirming!',
         act_share: 'Share on WhatsApp', share_view: 'See the map:',
+        act_flag: '🚩 Report a problem', act_flagged: '🚩 Reported', confirm_flag: 'Report "{area}" as wrong, fake or not suitable? The admin will check it.', t_flagged: 'Thanks. The admin will check this report.',
         radar_toggle: 'Rain radar', radar_time: 'Radar {time}', radar_fail: 'Rain radar isn’t available right now.',
         install_btn: 'Install app', t_installed: 'App installed!',
         install_ios: 'To install: tap the Share button (□↑) in Safari, then choose "Add to Home Screen".',
@@ -730,6 +731,8 @@
     const readJson=(k,fallback)=>{try{return JSON.parse(localStorage.getItem(k))??fallback}catch{return fallback}};
     const writeJson=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
     let confirmedIds=new Set(readJson(CONFIRMED_KEY,[]));
+    const FLAGGED_KEY='pa-flagged';
+    let flaggedIds=new Set(readJson(FLAGGED_KEY,[]));
 
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     function toast(message,duration=3200){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.classList.remove('show'),duration)}
@@ -796,29 +799,17 @@
 
     // ----- flood-prone hotspots -----
 
-    // From the "UPDATE BANDAR PUNCAK ALAM" WhatsApp group (Apr 2025 – Nov 2026):
-    // days = number of separate days with flood messages about the spot. Locations are approximate.
-    const NOTE_REPEATED={ms:'Banyak kali dilapor banjir.',en:'Reported flooded many times.'};
-    const NOTE_NOV_LIST={ms:'Dalam senarai tempat banjir Nov 2026.',en:'On the Nov 2026 list of flooded spots.'};
-    const FLOOD_HOTSPOTS=[
-      {name:'Avatar (Jalan Bukit Cerakah)',lat:3.24649,lng:101.47193,days:27,note:{ms:'Paling kerap banjir. Ada kereta tenggelam. Biasanya banjir lepas Paya Jaras dan Sg Buloh.',en:'Floods most often. Cars have been submerged. Usually floods after Paya Jaras and Sg Buloh.'}},
-      {name:'Depan Zombie Seafood',lat:3.19552,lng:101.43315,days:26,note:{ms:'Antara tempat paling kerap banjir. Selalu orang tanya "ada banjir selain Zombie?"',en:'One of the most often flooded spots. People often ask "anywhere flooded besides Zombie?"'}},
-      {name:'Depan Proton',lat:3.24086,lng:101.44138,days:14,note:{ms:'Air selalu naik di sini. Kadang-kadang masih boleh lalu.',en:'Water often rises here. Sometimes you can still pass.'}},
-      {name:'Alam Suria / Simpang 4',lat:3.23543,lng:101.40706,days:12,note:{ms:'Pernah air paras lutut.',en:'Water has reached knee height.'}},
-      {name:{ms:'Keluar LATAR Puncak Alam',en:'LATAR Puncak Alam exit'},lat:3.27346,lng:101.45929,days:11,note:{ms:'Banjir di jalan masuk dan keluar LATAR.',en:'Floods on the roads into and out of LATAR.'}},
-      {name:{ms:'Bulatan Daunan',en:'Daunan roundabout'},lat:3.26205,lng:101.45191,days:10,note:{ms:'Sungai melimpah ke arah Ijok.',en:'The river overflows toward Ijok.'}},
-      {name:{ms:'Paya Jaras (pasar malam)',en:'Paya Jaras (night market)'},lat:3.1997,lng:101.54617,days:9,note:{ms:'Banjir awal. Tanda Avatar mungkin banjir selepas ini.',en:'Floods early: a sign Avatar may flood next.'}},
-      {name:'Alam Jaya',lat:3.25373,lng:101.44533,days:9,note:NOTE_REPEATED},
-      {name:'Alam Budiman',lat:3.14262,lng:101.47938,days:9,note:{ms:'Jalan keluar ke Shah Alam. Banjir dan jem.',en:'Route out to Shah Alam. Floods and traffic jams.'}},
-      {name:{ms:'Kg Bukit Hijau (bawah LATAR)',en:'Kg Bukit Hijau (under LATAR)'},lat:3.25604,lng:101.38092,days:8,note:{ms:'Jalan rendah bawah lebuh raya.',en:'Low road under the highway.'}},
-      {name:'Hillpark',lat:3.21458,lng:101.45654,days:7,note:NOTE_REPEATED},
-      {name:'Persiaran Mokhtar Dahari',lat:3.22319,lng:101.45622,days:7,note:{ms:'Jalan utama keluar. Hati-hati dekat Eco Grandeur.',en:'Main road out. Take care near Eco Grandeur.'}},
-      {name:'Alam Perdana',lat:3.25542,lng:101.45731,days:7,note:NOTE_REPEATED},
-      {name:'Depan McD (Eco Grandeur)',lat:3.2217,lng:101.44787,days:6,note:NOTE_NOV_LIST},
-      {name:'Parit Mahang',lat:3.30856,lng:101.37849,days:6,note:{ms:'Pernah air paras lutut.',en:'Water has reached knee height.'}},
-      {name:'Eco Grandeur',lat:3.22413,lng:101.46826,days:5,note:NOTE_REPEATED},
-      {name:'Ijok – Caledonia',lat:3.29458,lng:101.43576,days:1,note:NOTE_NOV_LIST},
-    ];
+    // Flood-prone spots, edited by the admin in /admin. Loaded from /api/hotspots.
+    let FLOOD_HOTSPOTS=[];
+    const hotspotGeoJSON=()=>({type:'FeatureCollection',features:FLOOD_HOTSPOTS.map((h,i)=>({type:'Feature',properties:{i,days:h.days},geometry:{type:'Point',coordinates:[h.lng,h.lat]}}))});
+    async function loadHotspots(){
+      try{
+        const res=await fetch('/api/hotspots');if(!res.ok)throw new Error('HTTP '+res.status);
+        FLOOD_HOTSPOTS=await res.json();
+      }catch(err){console.warn('Hotspots:',err);return}
+      mapInstance?.getSource('hotspots')?.setData(hotspotGeoJSON());
+      renderHotspotList();
+    }
     const HS_KEY='pa-show-hotspots';
     let hsPopup=null, hsPopupSpot=null;
     function readPref(){try{return localStorage.getItem(HS_KEY)!=='0'}catch{return true}}
@@ -836,7 +827,7 @@
 
     function addHotspotLayers(){
       if(!mapInstance||mapInstance.getSource('hotspots'))return;
-      mapInstance.addSource('hotspots',{type:'geojson',data:{type:'FeatureCollection',features:FLOOD_HOTSPOTS.map((h,i)=>({type:'Feature',properties:{i,days:h.days},geometry:{type:'Point',coordinates:[h.lng,h.lat]}}))}});
+      mapInstance.addSource('hotspots',{type:'geojson',data:hotspotGeoJSON()});
       const visibility=readPref()?'visible':'none';
       // Soft halo sized by how often the spot floods, plus a small solid centre.
       mapInstance.addLayer({id:'hs-halo',type:'circle',source:'hotspots',layout:{visibility},paint:{
@@ -861,7 +852,7 @@
       for(const id of ['hs-halo','hs-core'])if(mapInstance?.getLayer(id))mapInstance.setLayoutProperty(id,'visibility',v?'visible':'none');
     }
     function renderHotspotList(){
-      const max=Math.max(...FLOOD_HOTSPOTS.map(h=>h.days));
+      const max=Math.max(1,...FLOOD_HOTSPOTS.map(h=>h.days));
       document.getElementById('hsList').innerHTML=[...FLOOD_HOTSPOTS].sort((a,b)=>b.days-a.days).map(h=>{
         const i=FLOOD_HOTSPOTS.indexOf(h);
         return `<button type="button" class="hs-item" data-hs="${i}"><b>${esc(L(h.name))}</b><span class="hs-days">${esc(t('hs_days',{n:h.days}))}</span><span class="hs-bar"><i style="width:${Math.round(h.days/max*100)}%"></i></span><small>${esc(L(h.note))}</small></button>`;
@@ -961,6 +952,8 @@
         }
         if(r.status!=='clear'&&!later&&r.type!=='weather')actions.push(`<button class="mini-btn good" type="button" data-act="clear" data-id="${esc(r.id)}">${esc(t('act_clear'))}</button>`);
         actions.push(`<button class="mini-btn wa" type="button" data-act="share" data-id="${esc(r.id)}">${esc(t('act_share'))}</button>`);
+        const flagged=flaggedIds.has(r.id);
+        actions.push(`<button class="mini-btn flag${flagged?' done':''}" type="button" data-act="flag" data-id="${esc(r.id)}"${flagged?' disabled':''}>${esc(t(flagged?'act_flagged':'act_flag'))}</button>`);
         if(canRemove(r))actions.push(`<button class="mini-btn danger" type="button" data-act="remove" data-id="${esc(r.id)}">${esc(t('act_remove'))}</button>`);
         const photo=r.hasPhoto?`<a class="report-photo" href="${photoUrl(r.id,true)}" target="_blank" rel="noopener"><img src="${photoUrl(r.id)}" alt="${esc(t('photo_alt'))}" loading="lazy"></a>`:'';
         const verified=r.userId!=null?` <span class="verified" title="${esc(t('verified'))}">✓</span>`:'';
@@ -1000,6 +993,17 @@
       }catch{toast(t('t_network'))}
     }
 
+    async function flagReport(id){
+      const r=reports.find(x=>x.id===id);if(!r||flaggedIds.has(id))return;
+      if(!confirm(t('confirm_flag',{area:r.area})))return;
+      try{
+        const res=await fetch(`/api/reports/${id}/flag`,{method:'POST',headers:await authHeaders(true),body:'{}'});
+        if(!res.ok){toast(await errorMessage(res));return}
+        flaggedIds.add(id);writeJson(FLAGGED_KEY,[...flaggedIds].slice(-300));
+        renderReports();toast(t('t_flagged'),5000);
+      }catch{toast(t('t_network'))}
+    }
+
     function shareReport(id){
       const r=reports.find(x=>x.id===id);if(!r)return;
       const later=supersededBy(r);
@@ -1026,7 +1030,7 @@
     document.getElementById('feed').addEventListener('click',e=>{
       const b=e.target.closest('[data-act]');if(!b)return;
       const id=Number(b.dataset.id);
-      ({focus:()=>focusReport(id),clear:()=>markClear(id),remove:()=>removeReport(id),confirm:()=>confirmReport(id),share:()=>shareReport(id),retry:fetchReports,older:()=>{showOlder=!showOlder;renderReports()}})[b.dataset.act]?.();
+      ({focus:()=>focusReport(id),clear:()=>markClear(id),remove:()=>removeReport(id),confirm:()=>confirmReport(id),share:()=>shareReport(id),flag:()=>flagReport(id),retry:fetchReports,older:()=>{showOlder=!showOlder;renderReports()}})[b.dataset.act]?.();
     });
 
     // ----- photo: shrink on the phone before upload (also drops location data) -----
@@ -1313,6 +1317,7 @@
     renderPinStatus();
     initMap();
     fetchReports().then(openDeepLink);
+    loadHotspots();
     // Keep the board current; skip while the tab is hidden.
     setInterval(()=>{if(!document.hidden)fetchReports()},REFRESH_EVERY);
   </script>

@@ -8,7 +8,8 @@
     "dev": "node --env-file-if-exists=.env.local server.js",
     "start": "node --env-file-if-exists=.env.local server.js",
     "build": "node --check server.js && node -e \"import('./src/db/index.ts').then(()=>console.log('Build check passed'))\"",
-    "lint": "node --check server.js"
+    "lint": "node --check server.js",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.js\""
   },
   "dependencies": {
     "@neon/config": "^1.14.4",
@@ -22,5 +23,9 @@
     "firebase-admin": "^14.5.1",
     "pg": "^8.23.1",
     "web-push": "^4.0.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "@electric-sql/pglite-socket": "^0.2.19"
   }
 }
