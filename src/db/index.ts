@@ -98,6 +98,23 @@ async function runSchemaSql(conn: { query: (sql: string) => Promise<unknown> }) 
     );
     CREATE INDEX IF NOT EXISTS reports_time_idx ON reports (time DESC);
     CREATE INDEX IF NOT EXISTS reports_user_id_idx ON reports (user_id);
+    ALTER TABLE reports ADD COLUMN IF NOT EXISTS water_level text;
+    CREATE TABLE IF NOT EXISTS report_confirmations (
+      report_id integer NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+      voter_key text NOT NULL,
+      created_at timestamp DEFAULT now(),
+      PRIMARY KEY (report_id, voter_key)
+    );
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      endpoint text PRIMARY KEY,
+      p256dh text NOT NULL,
+      auth text NOT NULL,
+      lat double precision NOT NULL,
+      lng double precision NOT NULL,
+      radius_km integer NOT NULL,
+      lang text NOT NULL DEFAULT 'ms',
+      created_at timestamp DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS report_photos (
       report_id integer PRIMARY KEY REFERENCES reports(id) ON DELETE CASCADE,
       mime text NOT NULL,

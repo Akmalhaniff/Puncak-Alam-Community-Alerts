@@ -8,6 +8,10 @@
   <meta name="description" content="A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam." />
   <meta property="og:title" content="Puncak Alam Community Alerts" />
   <meta property="og:description" content="A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam." />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Banjir PA" />
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="anonymous" />
   <style>
     :root{--ink:#122b2b;--muted:#71807c;--paper:#f5f6f0;--white:#fff;--line:#e5e9e1;--green:#1e6658;--green2:#dff1e7;--lime:#d3ef72;--orange:#e87947;--orangebg:#fff0e7;--red:#b9493e;--redbg:#fff0ee;--blue:#e9f1f2;--shadow:0 16px 48px #17333112;--radius:22px}
@@ -155,6 +159,25 @@
     .dev-name{display:inline-block;font-weight:800;color:#133735;background:var(--lime);padding:2px 9px;border-radius:8px;letter-spacing:.01em;transform:rotate(-1.5deg)}
     .footer-sub{margin:6px 0 0;font-size:11px;color:#8a9690}
 
+    /* ---- tools row: install + alerts ---- */
+    .tools{display:flex;gap:8px;flex-wrap:wrap;margin:-8px 0 18px}
+    .tool-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 13px;font-size:12px;font-weight:750;color:#28473f}
+    .tool-btn:hover{background:#f6f8f3}
+    .tool-btn.on{background:#e8f5ed;border-color:#cfe6d8;color:#1e6658}
+    /* ---- water level ---- */
+    .level-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .level-pick label{position:relative;cursor:pointer}
+    .level-pick input{position:absolute;opacity:0;inset:0;margin:0}
+    .level-pick span{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid #dfe5dc;border-radius:11px;padding:8px 4px;font-size:20px;line-height:1.1;text-align:center;background:#fff}
+    .level-pick span b{font-size:11px;font-weight:700;color:#3c5a52}
+    .level-pick input:checked + span{border-color:#c2452f;background:#fff0ee;box-shadow:0 0 0 2px #c2452f33}
+    .level-pick input:focus-visible + span{outline:2px solid #5d9b82}
+    .level-chip{display:inline-block;margin-top:6px;border-radius:7px;background:#fff0ee;color:#a2453b;font-size:11px;font-weight:800;padding:3px 8px}
+    .confirm-count{display:inline-block;margin-left:6px;font-size:11px;color:#2a7a58;font-weight:700}
+    .mini-btn.wa{background:#e9f8ef;border-color:#c9ecd6;color:#1d7a46}
+    .mini-btn.done{background:#eef3ee;color:#6d7b76;cursor:default}
+    .radar-time{font-size:11px;color:#667670}
+
     /* ---- phones ---- */
     @media (max-width: 640px){
       .top{padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));gap:10px}
@@ -214,6 +237,9 @@
       .form-buttons .btn{flex:1;padding:14px}
       #choosePin,.photo-btn{padding:11px 14px}
       .lang-switch button{padding:8px 9px}
+      .tools{margin:-4px 0 12px}
+      .tool-btn{flex:1;justify-content:center;padding:11px 10px;font-size:12px}
+      .level-pick span{font-size:22px;padding:10px 4px}
       .report-photo img{max-width:100%;max-height:240px}
       .site-footer{padding:6px 16px calc(96px + env(safe-area-inset-bottom))}
       .shell{padding-bottom:12px}
@@ -253,6 +279,11 @@
       <div><span data-t-html="notice"></span><small class="notice-small" data-t="notice_retention"></small></div>
     </div>
 
+    <div class="tools">
+      <button type="button" class="tool-btn" id="notifyBtn" hidden><span aria-hidden="true">🔔</span><span id="notifyLabel"></span></button>
+      <button type="button" class="tool-btn" id="installBtn" hidden><span aria-hidden="true">📲</span><span data-t="install_btn"></span></button>
+    </div>
+
     <section class="layout">
       <div class="panel">
         <div class="panel-head">
@@ -264,6 +295,8 @@
         </div>
         <div class="hotspot-bar">
           <label class="hs-toggle"><input type="checkbox" id="hsToggle" checked /><span class="hs-swatch" aria-hidden="true"></span><span data-t="hs_toggle"></span></label>
+          <label class="hs-toggle"><input type="checkbox" id="radarToggle" /><span aria-hidden="true">🌧️</span><span data-t="radar_toggle"></span></label>
+          <span class="radar-time" id="radarTime"></span>
           <span class="hs-hint" data-t="hs_hint"></span>
           <button type="button" class="hs-list-btn" id="hsListBtn" aria-expanded="false" aria-controls="hsList"></button>
         </div>
@@ -301,9 +334,19 @@
           <div class="field"><label for="rStatus" data-t="f_status"></label><select id="rStatus"><option value="danger" data-t="status_danger_opt"></option><option value="uncertain" data-t="status_uncertain_opt"></option><option value="clear" data-t="status_clear_opt"></option></select></div>
           <div class="field"><label for="rName" data-t="f_name"></label><input id="rName" maxlength="40" data-t-ph="f_name_ph" /></div>
         </div>
+        <div class="field" id="levelField">
+          <label data-t="f_level"></label>
+          <div class="level-pick" role="radiogroup">
+            <label><input type="radio" name="rLevel" value="ankle" /><span>🦶<b data-t="lvl_ankle"></b></span></label>
+            <label><input type="radio" name="rLevel" value="knee" /><span>🦵<b data-t="lvl_knee"></b></span></label>
+            <label><input type="radio" name="rLevel" value="waist" /><span>🧍<b data-t="lvl_waist"></b></span></label>
+            <label><input type="radio" name="rLevel" value="car" /><span>🚗<b data-t="lvl_car"></b></span></label>
+          </div>
+        </div>
         <div class="field">
           <label data-t="f_spot"></label>
           <div class="row-inline">
+            <button class="btn secondary small" type="button" id="useGps" data-t="f_spot_gps"></button>
             <button class="btn secondary small" type="button" id="choosePin" data-t="f_spot_btn"></button>
             <span id="pinStatus" class="pin-status"></span>
           </div>
@@ -325,6 +368,31 @@
         <div class="form-buttons">
           <button class="btn secondary" type="button" data-close data-t="cancel"></button>
           <button class="btn" type="submit" data-t="send"></button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="notifyDialog">
+    <form class="modal" id="notifyForm">
+      <div class="modal-head">
+        <div><h2 data-t="nt_title"></h2><p data-t="nt_sub"></p></div>
+        <button class="x" type="button" data-close data-t-aria="close">×</button>
+      </div>
+      <div class="form">
+        <div class="field">
+          <label data-t="nt_where"></label>
+          <div class="row-inline">
+            <button type="button" class="btn secondary small" id="ntUseGps" data-t="nt_use_gps"></button>
+            <button type="button" class="btn secondary small" id="ntUseMap" data-t="nt_use_map"></button>
+            <span id="ntSpot" class="pin-status"></span>
+          </div>
+        </div>
+        <div class="field"><label for="ntRadius" data-t="nt_radius"></label><select id="ntRadius"><option value="2">2 km</option><option value="5" selected>5 km</option><option value="10">10 km</option></select></div>
+        <div class="form-note" data-t="nt_note"></div>
+        <div class="form-buttons">
+          <button type="button" class="btn secondary" id="ntOff" data-t="nt_off" hidden></button>
+          <button class="btn" type="submit" data-t="nt_on"></button>
         </div>
       </div>
     </form>
@@ -404,6 +472,26 @@
         si_network: 'Masalah internet masa log masuk. Cuba lagi.',
         si_storage: 'Browser sekat log masuk. Matikan mod peribadi (private), kemudian cuba lagi.',
         si_other: 'Log masuk tak berjaya. Cuba lagi.',
+        f_spot_gps: '📍 Guna lokasi saya', gps_wait: 'Mencari lokasi anda…',
+        gps_denied: 'Tak dapat lokasi. Benarkan akses lokasi, atau pilih di peta.',
+        gps_far: 'Lokasi anda di luar kawasan Puncak Alam. Pilih di peta.',
+        f_level: 'Paras air (tak wajib)',
+        lvl_ankle: 'Buku lali', lvl_knee: 'Lutut', lvl_waist: 'Pinggang', lvl_car: 'Kereta tenggelam',
+        lvl_long_ankle: 'Paras buku lali', lvl_long_knee: 'Paras lutut', lvl_long_waist: 'Paras pinggang', lvl_long_car: 'Kereta tenggelam',
+        act_confirm: '👍 Saya pun nampak', act_confirmed: '👍 Dah sahkan', confirm_count: '{n} orang sahkan',
+        t_confirmed: 'Terima kasih kerana sahkan!',
+        act_share: 'Kongsi WhatsApp', share_view: 'Lihat peta:',
+        radar_toggle: 'Radar hujan', radar_time: 'Radar {time}', radar_fail: 'Radar hujan tak dapat dimuat sekarang.',
+        install_btn: 'Pasang app', t_installed: 'App dipasang!',
+        install_ios: 'Untuk pasang: tekan butang Kongsi (□↑) di Safari, kemudian pilih "Add to Home Screen".',
+        notify_btn: 'Amaran banjir dekat saya', notify_on: 'Amaran aktif ({km} km)',
+        nt_title: 'Amaran banjir dekat saya', nt_sub: 'Kami beritahu bila ada laporan banjir dekat tempat yang anda pilih.',
+        nt_where: 'Tempat', nt_use_gps: '📍 Lokasi saya', nt_use_map: '🗺️ Pilih di peta', nt_radius: 'Jarak',
+        nt_note: 'Boleh matikan bila-bila masa.', nt_on: 'Hidupkan amaran', nt_off: 'Matikan amaran',
+        nt_need_spot: 'Pilih tempat dulu.', nt_pick: 'Tekan peta untuk pilih tempat amaran.',
+        nt_denied: 'Notifikasi disekat. Benarkan notifikasi untuk laman ini dalam tetapan browser.',
+        nt_ios: 'Di iPhone, pasang app dulu (Kongsi → Add to Home Screen), kemudian buka app itu untuk hidupkan amaran.',
+        nt_done: 'Amaran dihidupkan ✓', nt_stopped: 'Amaran dimatikan.', nt_fail: 'Tak dapat hidupkan amaran. Cuba lagi.',
         footer_a: 'Dibina dengan ☕ dan sedikit hujan oleh',
         footer_b: '🌧️',
         footer_sub: 'Untuk jiran-jiran Puncak Alam. Jaga diri, jaga jiran.',
@@ -475,6 +563,26 @@
         si_network: 'Internet problem during sign-in. Please try again.',
         si_storage: 'Your browser is blocking sign-in. Turn off private mode, then try again.',
         si_other: 'Sign-in didn’t work. Please try again.',
+        f_spot_gps: '📍 Use my location', gps_wait: 'Finding your location…',
+        gps_denied: 'Couldn’t get your location. Allow location access, or pick on the map.',
+        gps_far: 'You seem to be outside the Puncak Alam area. Pick on the map instead.',
+        f_level: 'Water level (optional)',
+        lvl_ankle: 'Ankle', lvl_knee: 'Knee', lvl_waist: 'Waist', lvl_car: 'Cars under water',
+        lvl_long_ankle: 'Ankle deep', lvl_long_knee: 'Knee deep', lvl_long_waist: 'Waist deep', lvl_long_car: 'Cars under water',
+        act_confirm: '👍 I see it too', act_confirmed: '👍 Confirmed', confirm_count: '{n} confirmed',
+        t_confirmed: 'Thanks for confirming!',
+        act_share: 'Share on WhatsApp', share_view: 'See the map:',
+        radar_toggle: 'Rain radar', radar_time: 'Radar {time}', radar_fail: 'Rain radar isn’t available right now.',
+        install_btn: 'Install app', t_installed: 'App installed!',
+        install_ios: 'To install: tap the Share button (□↑) in Safari, then choose "Add to Home Screen".',
+        notify_btn: 'Flood alerts near me', notify_on: 'Alerts on ({km} km)',
+        nt_title: 'Flood alerts near me', nt_sub: 'We’ll tell you when a flood is reported near the place you choose.',
+        nt_where: 'Place', nt_use_gps: '📍 My location', nt_use_map: '🗺️ Pick on map', nt_radius: 'Distance',
+        nt_note: 'You can turn this off any time.', nt_on: 'Turn on alerts', nt_off: 'Turn off alerts',
+        nt_need_spot: 'Pick a place first.', nt_pick: 'Tap the map to pick the place for alerts.',
+        nt_denied: 'Notifications are blocked. Allow them for this site in your browser settings.',
+        nt_ios: 'On iPhone, install the app first (Share → Add to Home Screen), then open it to turn on alerts.',
+        nt_done: 'Alerts turned on ✓', nt_stopped: 'Alerts turned off.', nt_fail: 'Couldn’t turn on alerts. Please try again.',
         footer_a: 'Built with ☕ and a bit of rain by',
         footer_b: '🌧️',
         footer_sub: 'For the neighbours of Puncak Alam. Stay safe, look out for each other.',
@@ -612,8 +720,16 @@
 
     let reports=[], currentFilter='all', showOlder=false, loadError=false;
     let me={signedIn:false};
-    let mapInstance=null, reportMarkers=new Map(), draftMarker=null, selectedCoordinates=null, waitingForPin=false;
+    let mapInstance=null, mapReady=false, reportMarkers=new Map(), draftMarker=null, selectedCoordinates=null;
     let pendingPhoto=null; // { thumb, full } JPEG data URLs, ready to upload
+    let pickMode=null; // 'report' | 'notify' while the user taps the map to choose a spot
+    let notifySpot=null; // [lat, lng] for flood alerts
+    const BOUNDS={minLat:2.9,maxLat:3.6,minLng:101.1,maxLng:101.8};
+    const inBounds=(lat,lng)=>lat>=BOUNDS.minLat&&lat<=BOUNDS.maxLat&&lng>=BOUNDS.minLng&&lng<=BOUNDS.maxLng;
+    const CONFIRMED_KEY='pa-confirmed';
+    const readJson=(k,fallback)=>{try{return JSON.parse(localStorage.getItem(k))??fallback}catch{return fallback}};
+    const writeJson=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+    let confirmedIds=new Set(readJson(CONFIRMED_KEY,[]));
 
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     function toast(message,duration=3200){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.classList.remove('show'),duration)}
@@ -686,6 +802,7 @@
     const NOTE_NOV_LIST={ms:'Dalam senarai tempat banjir Nov 2026.',en:'On the Nov 2026 list of flooded spots.'};
     const FLOOD_HOTSPOTS=[
       {name:'Avatar (Jalan Bukit Cerakah)',lat:3.24649,lng:101.47193,days:27,note:{ms:'Paling kerap banjir. Ada kereta tenggelam. Biasanya banjir lepas Paya Jaras dan Sg Buloh.',en:'Floods most often. Cars have been submerged. Usually floods after Paya Jaras and Sg Buloh.'}},
+      {name:'Depan Zombie Seafood',lat:3.19552,lng:101.43315,days:26,note:{ms:'Antara tempat paling kerap banjir. Selalu orang tanya "ada banjir selain Zombie?"',en:'One of the most often flooded spots. People often ask "anywhere flooded besides Zombie?"'}},
       {name:'Depan Proton',lat:3.24086,lng:101.44138,days:14,note:{ms:'Air selalu naik di sini. Kadang-kadang masih boleh lalu.',en:'Water often rises here. Sometimes you can still pass.'}},
       {name:'Alam Suria / Simpang 4',lat:3.23543,lng:101.40706,days:12,note:{ms:'Pernah air paras lutut.',en:'Water has reached knee height.'}},
       {name:{ms:'Keluar LATAR Puncak Alam',en:'LATAR Puncak Alam exit'},lat:3.27346,lng:101.45929,days:11,note:{ms:'Banjir di jalan masuk dan keluar LATAR.',en:'Floods on the roads into and out of LATAR.'}},
@@ -768,7 +885,8 @@
       list.filter(r=>!supersededBy(r)).forEach(r=>{
         const [lat,lng]=reportCoords(r);
         const img=r.hasPhoto?`<a href="${photoUrl(r.id,true)}" target="_blank" rel="noopener"><img class="popup-photo" src="${photoUrl(r.id)}" alt="${esc(t('photo_alt'))}" loading="lazy"></a>`:'';
-        const popup=`${img}<b>${esc(r.area)}</b><br/>${esc(fmtTime(r.time))} · ${esc(ageLabel(r.time))}<br/>${esc(r.details)}<br/><small>${esc(t('by',{who:whoName(r)}))}${r.lat==null?' · '+esc(t('approx')):''}</small>`;
+        const lvl=r.waterLevel?`<br/><span class="level-chip">${LEVEL_ICON[r.waterLevel]||''} ${esc(t('lvl_long_'+r.waterLevel))}</span>`:'';
+        const popup=`${img}<b>${esc(r.area)}</b>${lvl}<br/>${esc(fmtTime(r.time))} · ${esc(ageLabel(r.time))}<br/>${esc(r.details)}<br/><small>${esc(t('by',{who:whoName(r)}))}${r.lat==null?' · '+esc(t('approx')):''}</small>`;
         const m=new maplibregl.Marker({element:pinElement(r.status,ageMs(r)>FADE_AFTER),anchor:'bottom'})
           .setLngLat([lng,lat])
           .setPopup(new maplibregl.Popup({offset:34,closeButton:false}).setHTML(popup))
@@ -809,15 +927,16 @@
       mapInstance=new maplibregl.Map({container:el,style:MAP_STYLE,center:[101.438,3.222],zoom:11.5,cooperativeGestures:true});
       mapInstance.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
       mapInstance.on('error',e=>console.warn('Map error:',e?.error||e));
-      mapInstance.on('load',addHotspotLayers);
+      mapInstance.on('load',()=>{mapReady=true;addHotspotLayers()});
       mapInstance.on('click',e=>{
         // Clicks on an existing pin open its popup; don't also treat them as a new point.
         if(e.originalEvent.target.closest('.pin-wrap'))return;
         // Tapping a flood-prone spot shows its details, unless the user is picking a report location.
-        const hs=!waitingForPin&&hotspotAt(e.point);
+        const hs=!pickMode&&hotspotAt(e.point);
         if(hs){showHotspotPopup(hs);return}
+        if(pickMode==='notify'){pickMode=null;notifySpot=[e.lngLat.lat,e.lngLat.lng];renderNotifySpot();openDialog('notifyDialog');toast(t('t_picked'));return}
         setSelectedPoint(e.lngLat.lat,e.lngLat.lng);
-        if(waitingForPin){waitingForPin=false;openDialog('reportDialog');toast(t('t_picked'))}
+        if(pickMode==='report'){pickMode=null;openDialog('reportDialog');toast(t('t_picked'))}
       });
     }
 
@@ -836,11 +955,18 @@
         const faded=ageMs(r)>FADE_AFTER||!!later;
         const tag=later?`<span class="report-tag clear">${esc(t('tag_later_clear'))}</span>`:`<span class="report-tag ${esc(r.status)}">${esc(t(tagKey[r.status]||'tag_other'))}</span>`;
         const actions=[`<button class="mini-btn" type="button" data-act="focus" data-id="${esc(r.id)}">${esc(t('act_map'))}</button>`];
+        if(r.status!=='clear'&&!later){
+          const done=confirmedIds.has(r.id);
+          actions.push(`<button class="mini-btn${done?' done':''}" type="button" data-act="confirm" data-id="${esc(r.id)}"${done?' disabled':''}>${esc(t(done?'act_confirmed':'act_confirm'))}</button>`);
+        }
         if(r.status!=='clear'&&!later&&r.type!=='weather')actions.push(`<button class="mini-btn good" type="button" data-act="clear" data-id="${esc(r.id)}">${esc(t('act_clear'))}</button>`);
+        actions.push(`<button class="mini-btn wa" type="button" data-act="share" data-id="${esc(r.id)}">${esc(t('act_share'))}</button>`);
         if(canRemove(r))actions.push(`<button class="mini-btn danger" type="button" data-act="remove" data-id="${esc(r.id)}">${esc(t('act_remove'))}</button>`);
         const photo=r.hasPhoto?`<a class="report-photo" href="${photoUrl(r.id,true)}" target="_blank" rel="noopener"><img src="${photoUrl(r.id)}" alt="${esc(t('photo_alt'))}" loading="lazy"></a>`:'';
         const verified=r.userId!=null?` <span class="verified" title="${esc(t('verified'))}">✓</span>`:'';
-        return `<article class="report${faded?' faded':''}"><span class="report-dot ${esc(r.status)}"></span><div><div class="report-title">${esc(r.area)}</div><div class="report-meta">${esc(fmtTime(r.time))} · ${esc(ageLabel(r.time))} · ${esc(t('by',{who:whoName(r)}))}${verified}</div><p>${esc(r.details)}</p>${photo}<div class="report-actions">${actions.join('')}</div></div>${tag}</article>`;
+        const level=r.waterLevel?`<span class="level-chip">${LEVEL_ICON[r.waterLevel]||''} ${esc(t('lvl_long_'+r.waterLevel))}</span>`:'';
+        const confirms=r.confirmCount?`<span class="confirm-count">· ${esc(t('confirm_count',{n:r.confirmCount}))}</span>`:'';
+        return `<article class="report${faded?' faded':''}" id="report-${esc(r.id)}"><span class="report-dot ${esc(r.status)}"></span><div><div class="report-title">${esc(r.area)}</div><div class="report-meta">${esc(fmtTime(r.time))} · ${esc(ageLabel(r.time))} · ${esc(t('by',{who:whoName(r)}))}${verified}${confirms}</div>${level}<p>${esc(r.details)}</p>${photo}<div class="report-actions">${actions.join('')}</div></div>${tag}</article>`;
       }).join('');
       if(!list.length&&!loadError)html+=`<div class="empty">${esc(t('empty'))}</div>`;
       if(older)html+=`<button type="button" class="older-toggle" data-act="older">${esc(showOlder?t('older_hide'):t('older_show',{n:older}))}</button>`;
@@ -860,6 +986,31 @@
       }catch{toast(t('t_network'))}
     }
 
+    const LEVEL_ICON={ankle:'🦶',knee:'🦵',waist:'🧍',car:'🚗'};
+
+    async function confirmReport(id){
+      if(confirmedIds.has(id))return;
+      try{
+        const res=await fetch(`/api/reports/${id}/confirm`,{method:'POST',headers:await authHeaders(true),body:'{}'});
+        if(!res.ok){toast(await errorMessage(res));return}
+        const {confirmCount}=await res.json();
+        confirmedIds.add(id);writeJson(CONFIRMED_KEY,[...confirmedIds].slice(-300));
+        const r=reports.find(x=>x.id===id);if(r)r.confirmCount=confirmCount;
+        renderReports();toast(t('t_confirmed'));
+      }catch{toast(t('t_network'))}
+    }
+
+    function shareReport(id){
+      const r=reports.find(x=>x.id===id);if(!r)return;
+      const later=supersededBy(r);
+      const tagKey={danger:'tag_danger',clear:'tag_clear',uncertain:'tag_uncertain'};
+      const tag=later?t('tag_later_clear'):t(tagKey[r.status]||'tag_other');
+      const level=r.waterLevel?` · ${t('lvl_long_'+r.waterLevel)}`:'';
+      const link=`${location.origin}/?r=${r.id}`;
+      const text=`⚠️ ${tag}: ${r.area}${level}\n${fmtTime(r.time)} (${ageLabel(r.time)})\n${r.details}\n\n${t('share_view')} ${link}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`,'_blank','noopener');
+    }
+
     async function removeReport(id){
       const r=reports.find(x=>x.id===id);if(!r)return;
       if(!confirm(t('confirm_remove',{area:r.area})))return;
@@ -875,7 +1026,7 @@
     document.getElementById('feed').addEventListener('click',e=>{
       const b=e.target.closest('[data-act]');if(!b)return;
       const id=Number(b.dataset.id);
-      ({focus:()=>focusReport(id),clear:()=>markClear(id),remove:()=>removeReport(id),retry:fetchReports,older:()=>{showOlder=!showOlder;renderReports()}})[b.dataset.act]?.();
+      ({focus:()=>focusReport(id),clear:()=>markClear(id),remove:()=>removeReport(id),confirm:()=>confirmReport(id),share:()=>shareReport(id),retry:fetchReports,older:()=>{showOlder=!showOlder;renderReports()}})[b.dataset.act]?.();
     });
 
     // ----- photo: shrink on the phone before upload (also drops location data) -----
@@ -951,7 +1102,7 @@
       mapInstance.once('moveend',()=>showHotspotPopup(h));
     });
     document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeDialog);
-    document.getElementById('choosePin').onclick=()=>{closeDialog();waitingForPin=true;toast(t('t_pick'));document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'})};
+    document.getElementById('choosePin').onclick=()=>{closeDialog();pickMode='report';toast(t('t_pick'));document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'})};
     document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{currentFilter=b.dataset.filter;document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x===b));renderReports()});
 
     document.getElementById('reportForm').onsubmit=async e=>{
@@ -966,6 +1117,7 @@
         who:nameInput.value.trim(),
         lat:selectedCoordinates?selectedCoordinates[0]:null,
         lng:selectedCoordinates?selectedCoordinates[1]:null,
+        waterLevel:document.getElementById('rType').value==='flood'?(document.querySelector('input[name=rLevel]:checked')?.value||null):null,
         photo:pendingPhoto
       };
       submit.disabled=true;submit.textContent=t('sending');
@@ -979,6 +1131,7 @@
         e.target.reset();
         nameInput.value=keepName;
         clearPhoto();
+        updateLevelField();
         renderPinStatus();
         closeDialog();
         renderReports();
@@ -997,16 +1150,169 @@
     // ----- language switch -----
     document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
     window._onLangChange=()=>{
-      renderHotspotList();renderReports();renderPinStatus();
+      renderHotspotList();renderReports();renderPinStatus();renderNotifyButton();renderNotifySpot();
+      if(document.getElementById('radarToggle').checked)showRadar();
       if(hsPopup?.isOpen()&&hsPopupSpot)hsPopup.setHTML(hotspotPopupHtml(hsPopupSpot));
       window._renderAuth?.();
       const name=document.getElementById('rName');if(name.disabled)name.title=t('name_locked');
     };
 
+
+    // ----- water level only applies to flood reports -----
+    function updateLevelField(){
+      const flood=document.getElementById('rType').value==='flood';
+      document.getElementById('levelField').hidden=!flood;
+      if(!flood)document.querySelectorAll('input[name=rLevel]').forEach(i=>{i.checked=false});
+    }
+    document.getElementById('rType').addEventListener('change',updateLevelField);
+    // tapping the chosen level again clears it
+    document.querySelectorAll('input[name=rLevel]').forEach(i=>i.addEventListener('click',()=>{if(i.dataset.was==='1'){i.checked=false;i.dataset.was='0'}else{document.querySelectorAll('input[name=rLevel]').forEach(x=>x.dataset.was='0');i.dataset.was='1'}}));
+    updateLevelField();
+
+    // ----- "use my location" -----
+    function getPosition(){
+      return new Promise((resolve,reject)=>{
+        if(!navigator.geolocation)return reject(new Error('unsupported'));
+        navigator.geolocation.getCurrentPosition(p=>resolve([p.coords.latitude,p.coords.longitude]),reject,{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+      });
+    }
+    document.getElementById('useGps').onclick=async()=>{
+      toast(t('gps_wait'));
+      try{
+        const [lat,lng]=await getPosition();
+        if(!inBounds(lat,lng)){toast(t('gps_far'),6000);return}
+        if(!mapInstance){selectedCoordinates=[Number(lat.toFixed(6)),Number(lng.toFixed(6))];renderPinStatus()}
+        else setSelectedPoint(lat,lng);
+        toast(t('t_picked'));
+      }catch{toast(t('gps_denied'),6000)}
+    };
+
+    // ----- rain radar (RainViewer) -----
+    const RADAR_KEY='pa-radar';
+    let radarTimer=null;
+    async function showRadar(){
+      if(!mapInstance)return;
+      try{
+        const res=await fetch('/api/radar');if(!res.ok)throw new Error('radar '+res.status);
+        const {tiles,time}=await res.json();
+        const add=()=>{
+          if(mapInstance.getSource('radar'))mapInstance.getSource('radar').setTiles([tiles]);
+          else{
+            mapInstance.addSource('radar',{type:'raster',tiles:[tiles],tileSize:256,maxzoom:7,attribution:'<a href="https://www.rainviewer.com/" target="_blank" rel="noopener">Weather data by RainViewer</a>'});
+            mapInstance.addLayer({id:'radar',type:'raster',source:'radar',paint:{'raster-opacity':0.6}},mapInstance.getLayer('hs-halo')?'hs-halo':undefined);
+          }
+        };
+        mapReady?add():mapInstance.once('load',add);
+        document.getElementById('radarTime').textContent=t('radar_time',{time:new Date(time).toLocaleTimeString(lang==='ms'?'ms-MY':'en-MY',{hour:'numeric',minute:'2-digit'})});
+        clearTimeout(radarTimer);radarTimer=setTimeout(showRadar,10*60*1000);
+      }catch(err){
+        console.warn('Radar:',err);toast(t('radar_fail'));
+        document.getElementById('radarToggle').checked=false;hideRadar();
+      }
+    }
+    function hideRadar(){
+      clearTimeout(radarTimer);
+      if(mapInstance?.getLayer('radar'))mapInstance.removeLayer('radar');
+      if(mapInstance?.getSource('radar'))mapInstance.removeSource('radar');
+      document.getElementById('radarTime').textContent='';
+    }
+    document.getElementById('radarToggle').onchange=e=>{
+      try{localStorage.setItem(RADAR_KEY,e.target.checked?'1':'0')}catch{}
+      e.target.checked?showRadar():hideRadar();
+    };
+    if((()=>{try{return localStorage.getItem(RADAR_KEY)==='1'}catch{return false}})()){document.getElementById('radarToggle').checked=true;showRadar()}
+
+    // ----- installable app -----
+    const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+    const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+    let installPrompt=null;
+    if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(err=>console.warn('SW:',err));
+    window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;document.getElementById('installBtn').hidden=false});
+    window.addEventListener('appinstalled',()=>{installPrompt=null;document.getElementById('installBtn').hidden=true;toast(t('t_installed'))});
+    if(isIOS&&!isStandalone())document.getElementById('installBtn').hidden=false;
+    document.getElementById('installBtn').onclick=async()=>{
+      if(installPrompt){installPrompt.prompt();await installPrompt.userChoice.catch(()=>{});installPrompt=null;return}
+      toast(t('install_ios'),9000);
+    };
+
+    // ----- flood alerts (push notifications) -----
+    const NOTIFY_KEY='pa-notify';
+    let pushKey=null;
+    const pushSupported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+    function b64urlToBytes(s){const pad='='.repeat((4-s.length%4)%4);const raw=atob((s+pad).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(raw,c=>c.charCodeAt(0))}
+    function renderNotifyButton(){
+      const saved=readJson(NOTIFY_KEY,null);
+      const btn=document.getElementById('notifyBtn');
+      btn.classList.toggle('on',!!saved);
+      document.getElementById('notifyLabel').textContent=saved?t('notify_on',{km:saved.radiusKm}):t('notify_btn');
+      document.getElementById('ntOff').hidden=!saved;
+    }
+    function renderNotifySpot(){
+      const el=document.getElementById('ntSpot');
+      el.textContent=notifySpot?t('spot_picked'):t('spot_none');
+      el.classList.toggle('picked',!!notifySpot);
+    }
+    async function initNotify(){
+      // iPhone only allows notifications from the installed app; still show the button so people learn how.
+      if(!pushSupported&&!(isIOS&&!isStandalone()))return;
+      try{const res=await fetch('/api/push/key');if(!res.ok)return;pushKey=(await res.json()).publicKey}catch{return}
+      document.getElementById('notifyBtn').hidden=false;
+      renderNotifyButton();
+    }
+    document.getElementById('notifyBtn').onclick=()=>{
+      if(!pushSupported){toast(t('nt_ios'),9000);return}
+      const saved=readJson(NOTIFY_KEY,null);
+      if(saved){notifySpot=[saved.lat,saved.lng];document.getElementById('ntRadius').value=String(saved.radiusKm)}
+      renderNotifySpot();openDialog('notifyDialog');
+    };
+    document.getElementById('ntUseGps').onclick=async()=>{
+      toast(t('gps_wait'));
+      try{const [lat,lng]=await getPosition();if(!inBounds(lat,lng)){toast(t('gps_far'),6000);return}notifySpot=[lat,lng];renderNotifySpot();toast(t('t_picked'))}
+      catch{toast(t('gps_denied'),6000)}
+    };
+    document.getElementById('ntUseMap').onclick=()=>{closeDialog();pickMode='notify';toast(t('nt_pick'));document.getElementById('map').scrollIntoView({behavior:'smooth',block:'center'})};
+    document.getElementById('notifyForm').onsubmit=async e=>{
+      e.preventDefault();
+      if(!notifySpot){toast(t('nt_need_spot'));return}
+      const submit=e.target.querySelector('[type=submit]');submit.disabled=true;
+      try{
+        const permission=await Notification.requestPermission();
+        if(permission!=='granted'){toast(t('nt_denied'),7000);return}
+        const reg=await navigator.serviceWorker.ready;
+        const sub=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64urlToBytes(pushKey)});
+        const radiusKm=Number(document.getElementById('ntRadius').value);
+        const res=await fetch('/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON(),lat:notifySpot[0],lng:notifySpot[1],radiusKm,lang})});
+        if(!res.ok){toast(await errorMessage(res));return}
+        writeJson(NOTIFY_KEY,{lat:notifySpot[0],lng:notifySpot[1],radiusKm});
+        renderNotifyButton();closeDialog();toast(t('nt_done'));
+      }catch(err){console.warn('Notify:',err);toast(t('nt_fail'))}
+      finally{submit.disabled=false}
+    };
+    document.getElementById('ntOff').onclick=async()=>{
+      try{
+        const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription();
+        if(sub){await fetch('/api/push/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint})});await sub.unsubscribe()}
+      }catch(err){console.warn('Unsubscribe:',err)}
+      try{localStorage.removeItem(NOTIFY_KEY)}catch{}
+      renderNotifyButton();closeDialog();toast(t('nt_stopped'));
+    };
+    initNotify();
+
+    // ----- links to one report: /?r=123 (from WhatsApp shares and notifications) -----
+    let deepLinkId=Number(new URLSearchParams(location.search).get('r'))||null;
+    function openDeepLink(){
+      if(!deepLinkId)return;
+      const r=reports.find(x=>x.id===deepLinkId);if(!r)return;
+      deepLinkId=null;
+      if(ageMs(r)>HIDE_AFTER){showOlder=true;renderReports()}
+      if(currentFilter!=='all'&&r.type!==currentFilter){currentFilter='all';document.querySelectorAll('.filter').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));renderReports()}
+      setTimeout(()=>focusReport(r.id),300);
+    }
+
     renderHotspotList();
     renderPinStatus();
     initMap();
-    fetchReports();
+    fetchReports().then(openDeepLink);
     // Keep the board current; skip while the tab is hidden.
     setInterval(()=>{if(!document.hidden)fetchReports()},REFRESH_EVERY);
   </script>

@@ -3,9 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createHash, timingSafeEqual } from 'crypto';
 import { db, ensureSchema } from './src/db/index.ts';
-import { reportPhotos, reports, users } from './src/db/schema.ts';
+import { pushSubscriptions, reportConfirmations, reportPhotos, reports, users } from './src/db/schema.ts';
 import { desc, eq, getTableColumns, inArray, lt, sql } from 'drizzle-orm';
 import { adminAuth } from './src/lib/firebase-admin.ts';
+import * as webpush from 'web-push';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,15 +33,32 @@ const PUBLIC_FILES = {
   '/firebase-applet-config.json': 'firebase-applet-config.json',
   '/admin': 'admin.html',
   '/favicon.ico': 'favicon.ico',
+  '/manifest.webmanifest': 'manifest.webmanifest',
+  '/sw.js': 'sw.js',
+  '/icons/icon-192.png': 'icons/icon-192.png',
+  '/icons/icon-512.png': 'icons/icon-512.png',
+  '/icons/maskable-512.png': 'icons/maskable-512.png',
+  '/icons/apple-touch-icon.png': 'icons/apple-touch-icon.png',
 };
 for (const [route, file] of Object.entries(PUBLIC_FILES)) {
-  app.get(route, (_req, res) => res.sendFile(path.join(__dirname, file)));
+  app.get(route, (_req, res) => {
+    // The service worker must always be fresh so app updates reach installed phones.
+    if (route === '/sw.js') res.set('Cache-Control', 'no-cache');
+    res.sendFile(path.join(__dirname, file));
+  });
 }
+
+// Any successful change through the API makes the cached report list stale.
+app.use('/api', (req, res, next) => {
+  if (req.method !== 'GET') res.on('finish', () => { if (res.statusCode < 400) invalidateReportsCache(); });
+  next();
+});
 
 // ---------- helpers ----------
 
 const TYPES = new Set(['flood', 'road', 'weather']);
 const STATUSES = new Set(['danger', 'uncertain', 'clear']);
+const WATER_LEVELS = new Set(['ankle', 'knee', 'waist', 'car']);
 // Generous box around Puncak Alam / Kuala Selangor so pins can't be dropped on the other side of the world.
 const BOUNDS = { minLat: 2.9, maxLat: 3.6, minLng: 101.1, maxLng: 101.8 };
 
@@ -56,6 +74,8 @@ function validateReport(body) {
   if (!STATUSES.has(status)) return { error: 'Invalid status.' };
   if (!area) return { error: 'Area is required.' };
   if (!details) return { error: 'Details are required.' };
+  const waterLevel = body?.waterLevel == null || body.waterLevel === '' ? null : body.waterLevel;
+  if (waterLevel !== null && !WATER_LEVELS.has(waterLevel)) return { error: 'Invalid water level.' };
 
   let lat = null;
   let lng = null;
@@ -66,7 +86,7 @@ function validateReport(body) {
       lat >= BOUNDS.minLat && lat <= BOUNDS.maxLat && lng >= BOUNDS.minLng && lng <= BOUNDS.maxLng;
     if (!inBounds) return { error: 'Map point must be in the Puncak Alam area.' };
   }
-  return { value: { type, status, area, details, who, lat, lng, approximate: lat == null } };
+  return { value: { type, status, area, details, who, lat, lng, approximate: lat == null, waterLevel: type === 'flood' ? waterLevel : null } };
 }
 
 // Simple in-memory limiter: max N writes per IP per window. Resets on restart, which is fine for a community board.
@@ -182,6 +202,113 @@ function parsePhoto(photo) {
   return { value: { thumb, full } };
 }
 
+// ---------- report list cache ----------
+// Every open page refreshes the list each minute. Serving one shared copy for 30 seconds means the
+// database is asked at most twice a minute however many people are watching, so Neon's free compute
+// can still sleep when nobody is using the site and the monthly allowance isn't burned during a flood.
+const REPORTS_CACHE_MS = 30 * 1000;
+let reportsCache = null; // { at, data }
+let reportsInFlight = null;
+function invalidateReportsCache() { reportsCache = null; }
+
+async function loadReports() {
+  return db.select({
+    ...getTableColumns(reports),
+    hasPhoto: sql`exists (select 1 from report_photos p where p.report_id = ${reports.id})`.mapWith(Boolean),
+    confirmCount: sql`(select count(*)::int from report_confirmations c where c.report_id = ${reports.id})`.mapWith(Number),
+  }).from(reports).orderBy(desc(reports.time)).limit(500);
+}
+async function getReportsCached() {
+  if (reportsCache && Date.now() - reportsCache.at < REPORTS_CACHE_MS) return reportsCache.data;
+  if (!reportsInFlight) {
+    reportsInFlight = loadReports()
+      .then(data => { reportsCache = { at: Date.now(), data }; return data; })
+      .finally(() => { reportsInFlight = null; });
+  }
+  return reportsInFlight;
+}
+
+// ---------- "I see it too" confirmations ----------
+// One vote per person per report: the Google account when signed in, otherwise a salted hash of the
+// connection (the raw IP is never stored).
+const VOTER_SALT = process.env.VOTER_SALT || ADMIN_EMAIL_SHA256;
+const voterKey = (req, decoded) => decoded ? `u:${decoded.uid}` : `ip:${createHash('sha256').update(VOTER_SALT + req.ip).digest('hex').slice(0, 32)}`;
+
+const CONFIRM_LIMIT = 30;
+const confirmHits = new Map();
+function rateLimitConfirms(req, res, next) {
+  const now = Date.now();
+  const recent = (confirmHits.get(req.ip) || []).filter(t => now - t < WRITE_WINDOW_MS);
+  if (recent.length >= CONFIRM_LIMIT) return res.status(429).json({ error: 'Too many reports from this connection. Please wait a few minutes.' });
+  recent.push(now);
+  confirmHits.set(req.ip, recent);
+  next();
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, hits] of confirmHits) if (!hits.some(t => now - t < WRITE_WINDOW_MS)) confirmHits.delete(ip);
+}, WRITE_WINDOW_MS).unref();
+
+// ---------- rain radar (RainViewer, free for small community use; credit shown on the map) ----------
+const RADAR_CACHE_MS = 5 * 60 * 1000;
+let radarCache = null;
+async function getRadarFrame() {
+  if (radarCache && Date.now() - radarCache.at < RADAR_CACHE_MS) return radarCache.data;
+  const res = await fetch('https://api.rainviewer.com/public/weather-maps.json', { signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error(`RainViewer HTTP ${res.status}`);
+  const json = await res.json();
+  const latest = json?.radar?.past?.at(-1);
+  if (!latest || typeof json.host !== 'string' || typeof latest.path !== 'string') throw new Error('Unexpected RainViewer response');
+  const data = { tiles: `${json.host}${latest.path}/256/{z}/{x}/{y}/2/1_1.png`, time: latest.time * 1000 };
+  radarCache = { at: Date.now(), data };
+  return data;
+}
+
+// ---------- push notifications ----------
+// Needs VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY (generate once with `npx web-push generate-vapid-keys`).
+const PUSH_ENABLED = !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+if (PUSH_ENABLED) {
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'https://puncak-alam-community-alerts.ai.studio',
+    process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+}
+const PUSH_RADII = new Set([2, 5, 10]);
+
+function distanceKm(lat1, lng1, lat2, lng2) {
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(a));
+}
+
+const PUSH_TEXT = {
+  ms: { title: '⚠️ Banjir dilapor dekat anda', level: { ankle: 'paras buku lali', knee: 'paras lutut', waist: 'paras pinggang', car: 'kereta tenggelam' } },
+  en: { title: '⚠️ Flood reported near you', level: { ankle: 'ankle deep', knee: 'knee deep', waist: 'waist deep', car: 'cars submerged' } },
+};
+
+// Sends a notification about a new flood report to everyone watching an area that includes it.
+async function notifyNearby(report) {
+  if (!PUSH_ENABLED || report.status !== 'danger' || report.lat == null || report.lng == null) return;
+  try {
+    const subs = await db.select().from(pushSubscriptions);
+    const targets = subs.filter(s => distanceKm(s.lat, s.lng, report.lat, report.lng) <= s.radiusKm);
+    await Promise.all(targets.map(async s => {
+      const text = PUSH_TEXT[s.lang] || PUSH_TEXT.ms;
+      const level = report.waterLevel ? ` · ${text.level[report.waterLevel]}` : '';
+      const payload = JSON.stringify({ title: text.title, body: `${report.area}${level}`, url: `/?r=${report.id}`, tag: `report-${report.id}` });
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 3600, urgency: 'high' });
+      } catch (err) {
+        // 404/410: the phone unsubscribed or the app was removed. Forget it.
+        if (err.statusCode === 404 || err.statusCode === 410) await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, s.endpoint));
+        else console.warn('Push failed:', err.statusCode || err.message);
+      }
+    }));
+    if (targets.length) console.log(`Push: notified ${targets.length} subscriber(s) about report ${report.id}.`);
+  } catch (err) {
+    console.warn('Push notify failed:', err.message);
+  }
+}
+
 // ---------- retention ----------
 
 // Reports (and their photos, via ON DELETE CASCADE) are deleted automatically after this many days.
@@ -191,7 +318,10 @@ async function deleteExpiredReports() {
   try {
     const cutoff = new Date(Date.now() - RETENTION_DAYS * 86400000);
     const removed = await db.delete(reports).where(lt(reports.time, cutoff)).returning({ id: reports.id });
-    if (removed.length) console.log(`Auto-clear: deleted ${removed.length} report(s) older than ${RETENTION_DAYS} days.`);
+    if (removed.length) {
+      invalidateReportsCache();
+      console.log(`Auto-clear: deleted ${removed.length} report(s) older than ${RETENTION_DAYS} days.`);
+    }
   } catch (err) {
     console.warn('Auto-clear failed (will retry next hour):', err.cause?.message || err.message);
   }
@@ -217,11 +347,8 @@ setTimeout(prepareDatabase, 1000);
 
 app.get('/api/reports', async (_req, res) => {
   try {
-    const allReports = await db.select({
-      ...getTableColumns(reports),
-      hasPhoto: sql`exists (select 1 from report_photos p where p.report_id = ${reports.id})`.mapWith(Boolean),
-    }).from(reports).orderBy(desc(reports.time)).limit(500);
-    res.json(allReports);
+    res.set('Cache-Control', 'no-store');
+    res.json(await getReportsCached());
   } catch (error) {
     console.error('Failed to fetch reports:', error);
     res.status(500).json({ error: 'Failed to fetch reports' });
@@ -246,6 +373,72 @@ app.get('/api/reports/:id/photo', async (req, res) => {
   } catch (err) {
     console.error('Failed to load photo:', err);
     res.status(500).end();
+  }
+});
+
+// "I see it too": one vote per person per report.
+app.post('/api/reports/:id/confirm', rateLimitConfirms, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid report id.' });
+  try {
+    const decoded = await verifyToken(req);
+    const [report] = await db.select({ id: reports.id }).from(reports).where(eq(reports.id, id)).limit(1);
+    if (!report) return res.status(404).json({ error: 'Report not found.' });
+    await db.insert(reportConfirmations).values({ reportId: id, voterKey: voterKey(req, decoded) }).onConflictDoNothing();
+    const [{ count }] = await db.select({ count: sql`count(*)::int`.mapWith(Number) }).from(reportConfirmations).where(eq(reportConfirmations.reportId, id));
+    res.json({ id, confirmCount: count });
+  } catch (err) {
+    console.error('Failed to confirm report:', err);
+    res.status(500).json({ error: 'Failed to update report' });
+  }
+});
+
+app.get('/api/radar', async (_req, res) => {
+  try {
+    res.set('Cache-Control', 'public, max-age=300');
+    res.json(await getRadarFrame());
+  } catch (err) {
+    console.warn('Radar unavailable:', err.message);
+    res.status(503).json({ error: 'Radar unavailable' });
+  }
+});
+
+app.get('/api/push/key', (_req, res) => {
+  if (!PUSH_ENABLED) return res.status(404).json({ error: 'Notifications are not set up.' });
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/push/subscribe', rateLimitConfirms, async (req, res) => {
+  if (!PUSH_ENABLED) return res.status(404).json({ error: 'Notifications are not set up.' });
+  const sub = req.body?.subscription;
+  const lat = Number(req.body?.lat), lng = Number(req.body?.lng), radiusKm = Number(req.body?.radiusKm);
+  const lang = req.body?.lang === 'en' ? 'en' : 'ms';
+  const endpointOk = typeof sub?.endpoint === 'string' && /^https:\/\//.test(sub.endpoint) && sub.endpoint.length <= 1000;
+  const keysOk = typeof sub?.keys?.p256dh === 'string' && typeof sub?.keys?.auth === 'string' && sub.keys.p256dh.length <= 200 && sub.keys.auth.length <= 100;
+  const inBounds = Number.isFinite(lat) && Number.isFinite(lng) && lat >= BOUNDS.minLat && lat <= BOUNDS.maxLat && lng >= BOUNDS.minLng && lng <= BOUNDS.maxLng;
+  if (!endpointOk || !keysOk) return res.status(400).json({ error: 'Invalid subscription.' });
+  if (!inBounds) return res.status(400).json({ error: 'Map point must be in the Puncak Alam area.' });
+  if (!PUSH_RADII.has(radiusKm)) return res.status(400).json({ error: 'Invalid distance.' });
+  try {
+    const values = { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth, lat, lng, radiusKm, lang };
+    await db.insert(pushSubscriptions).values(values)
+      .onConflictDoUpdate({ target: pushSubscriptions.endpoint, set: { lat, lng, radiusKm, lang, p256dh: values.p256dh, auth: values.auth } });
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    console.error('Failed to save subscription:', err);
+    res.status(500).json({ error: 'Failed to save' });
+  }
+});
+
+app.post('/api/push/unsubscribe', async (req, res) => {
+  const endpoint = req.body?.endpoint;
+  if (typeof endpoint !== 'string') return res.status(400).json({ error: 'Invalid subscription.' });
+  try {
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Failed to remove subscription:', err);
+    res.status(500).json({ error: 'Failed to remove' });
   }
 });
 
@@ -277,9 +470,10 @@ app.post('/api/reports', rateLimitWrites, async (req, res) => {
           bytes: photo.value.thumb.length + photo.value.full.length,
         });
       }
-      return { ...row, hasPhoto: !!photo.value };
+      return { ...row, hasPhoto: !!photo.value, confirmCount: 0 };
     });
     res.status(201).json(created);
+    notifyNearby(created); // fire-and-forget; never delays the reply
   } catch (err) {
     console.error('Failed to create report:', err);
     res.status(500).json({ error: 'Failed to create report' });
@@ -354,12 +548,13 @@ const parseIds = value => (Array.isArray(value) ? value : [])
 app.get('/api/admin/health', async (_req, res) => {
   const started = Date.now();
   try {
-    const [{ count, photos, size }] = await db.select({
+    const [{ count, photos, subscribers, size }] = await db.select({
       count: sql`count(*)::int`,
       photos: sql`(select count(*)::int from report_photos)`,
+      subscribers: sql`(select count(*)::int from push_subscriptions)`,
       size: sql`pg_database_size(current_database())::bigint`.mapWith(Number),
     }).from(reports);
-    res.json({ db: { ok: true, ms: Date.now() - started, reports: count, photos, sizeMB: Math.round(size / 1048576 * 10) / 10, retentionDays: RETENTION_DAYS } });
+    res.json({ db: { ok: true, ms: Date.now() - started, reports: count, photos, subscribers, pushEnabled: PUSH_ENABLED, sizeMB: Math.round(size / 1048576 * 10) / 10, retentionDays: RETENTION_DAYS } });
   } catch (err) {
     res.json({ db: { ok: false, ms: Date.now() - started, error: err.cause?.message || err.message } });
   }

@@ -285,7 +285,7 @@
     async function loadHealth() {
       try { health = (await api('/api/admin/health')).db; }
       catch (err) { health = { ok: false, error: err.message }; }
-      $('dbSummary').textContent = health.ok ? `Connected · ${health.ms} ms · ${health.reports} reports · ${health.photos} photos · ${health.sizeMB} MB of 1024 MB used · auto-clear after ${health.retentionDays} days` : 'Not connected';
+      $('dbSummary').textContent = health.ok ? `Connected · ${health.ms} ms · ${health.reports} reports · ${health.photos} photos · ${health.sizeMB} MB of 1024 MB used · auto-clear after ${health.retentionDays} days · flood alerts: ${health.pushEnabled ? `${health.subscribers} subscriber(s)` : 'not set up (add VAPID keys)'}` : 'Not connected';
       $('dbError').hidden = health.ok;
       $('dbError').textContent = health.ok ? '' : health.error || 'Unknown error';
       renderCards();

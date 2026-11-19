@@ -14,6 +14,14 @@ Residents pin a report on the map with the area, what they're seeing, and when. 
 - **Freshness**: reports older than 2 hours fade. Reports older than 24 hours are hidden behind a "Show older reports" button.
 - **Google Sign-In (optional)**: signed-in reports show a ✓ and always use the poster's Google name. Signed-in users can remove their own reports.
 - **Admin**: one admin account, fixed in `server.js` (`ADMIN_EMAIL_SHA256`), can remove any report. It is matched by a SHA-256 fingerprint of a verified Google email, so it can't be changed through settings and the email isn't stored in the repo.
+- **Water level**: flood reports can say ankle, knee, waist, or cars under water (tap an icon).
+- **Use my location**: fills the report's map point from the phone's GPS.
+- **I see it too (+1)**: one vote per person per report, so neighbours can confirm a report.
+- **Share on WhatsApp**: each report has a share button with a link that opens that report on the map (`/?r=<id>`).
+- **Rain radar**: optional overlay from [RainViewer](https://www.rainviewer.com/) (free for small community use; credited on the map).
+- **Install as an app**: web app manifest, icons and a service worker (`sw.js`). Android/desktop show an install button; iPhone shows how to "Add to Home Screen".
+- **Flood alerts near me**: push notifications when a flood is reported within 2, 5 or 10 km of a chosen spot. On iPhone this works from the installed app (iOS 16.4+).
+- **Shared cache**: the report list is cached for 30 seconds on the server, so many viewers cost the database the same as one and Neon's free compute can sleep.
 - **Spam limits**: the server checks every report (known types and statuses only, length limits, map point must be near Puncak Alam). Each connection can post at most 5 reports or "now clear" updates per 10 minutes.
 
 ## Admin page
@@ -29,7 +37,7 @@ Every `/api/admin/*` endpoint checks the admin's Google sign-in on the server; t
 
 ## Database setup (free, with Neon)
 
-1. Create a free account at [neon.tech](https://neon.tech) and a project in the **Singapore** region (closest to Malaysia).
+1. Create a free account at [neon.tech](https://neon.tech) and a project in the **Singapore** region (`aws-ap-southeast-1`, closest to Malaysia; queries are ~15 ms instead of ~240 ms from the US).
 2. Copy the **pooled** connection string from the dashboard (*Connect* → enable *Connection pooling*).
 3. Set it as the `DATABASE_URL` secret/environment variable and restart the app.
 
@@ -48,6 +56,7 @@ npm start
 
 | Variable | Required | Purpose |
 |---|---|---|
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | For flood alerts | Web-push keys (`npx web-push generate-vapid-keys`). Without them the alerts button is hidden |
 | `DATABASE_URL` | Yes (or the `SQL_*` set below) | Postgres connection string, e.g. Neon's *pooled* connection string ending in `?sslmode=require` |
 | `SQL_HOST`, `SQL_USER`, `SQL_PASSWORD`, `SQL_DB_NAME` | Only without `DATABASE_URL` | Separate connection settings (the original Cloud SQL setup) |
 | `PORT` | No (default `3000`) | Port to listen on; set automatically by Cloud Run and most hosts |
