@@ -29,6 +29,7 @@ const PUBLIC_FILES = {
   '/index.html': 'index.html',
   '/firebase-applet-config.json': 'firebase-applet-config.json',
   '/admin': 'admin.html',
+  '/favicon.ico': 'favicon.ico',
 };
 for (const [route, file] of Object.entries(PUBLIC_FILES)) {
   app.get(route, (_req, res) => res.sendFile(path.join(__dirname, file)));
