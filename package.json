@@ -1,0 +1,16 @@
+{
+  "name": "puncak-alam-community-alerts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A simple community map for sharing flood, heavy-rain, and road-condition observations around Puncak Alam.",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node -e \"console.log('Static site ready')\"",
+    "lint": "node --check server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
