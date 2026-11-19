@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createHash, timingSafeEqual } from 'crypto';
 import { db, ensureSchema } from './src/db/index.ts';
-import { hotspots, pushSubscriptions, reportConfirmations, reportFlags, reportPhotos, reports, users } from './src/db/schema.ts';
+import { hotspots, pushSubscriptions, reportClearVotes, reportConfirmations, reportFlags, reportPhotos, reports, users } from './src/db/schema.ts';
 import { asc, desc, eq, getTableColumns, inArray, lt, sql } from 'drizzle-orm';
 import { adminAuth } from './src/lib/firebase-admin.ts';
 import * as webpush from 'web-push';
@@ -119,8 +119,8 @@ async function getSignedInUser(req) {
 
 // Admin only if Google has verified the email AND its fingerprint matches the admin's.
 function isAdmin(signedIn) {
-  const email = signedIn?.decoded.email;
-  if (!email || signedIn.decoded.email_verified !== true) return false;
+  const email = signedIn?.decoded?.email;
+  if (!email || signedIn.decoded.email_verified !== true) return false; // not signed in, or email not verified by Google
   const fingerprint = createHash('sha256').update(email.trim().toLowerCase()).digest();
   const expected = Buffer.from(ADMIN_EMAIL_SHA256, 'hex');
   return fingerprint.length === expected.length && timingSafeEqual(fingerprint, expected);
@@ -146,6 +146,7 @@ async function loadReports() {
     ...getTableColumns(reports),
     hasPhoto: sql`exists (select 1 from report_photos p where p.report_id = ${reports.id})`.mapWith(Boolean),
     confirmCount: sql`(select count(*)::int from report_confirmations c where c.report_id = ${reports.id})`.mapWith(Number),
+    clearVotes: sql`(select count(*)::int from report_clear_votes v where v.report_id = ${reports.id})`.mapWith(Number),
   }).from(reports).where(sql`not ${isHidden}`).orderBy(desc(reports.time)).limit(500);
 }
 async function getReportsCached() {
@@ -491,6 +492,10 @@ app.post('/api/reports', rateLimitWrites, async (req, res) => {
 });
 
 // "Now clear": posts a follow-up 'clear' report at the same spot as an earlier one.
+// "Dah surut": a vote that the spot is clear now. The flood pin only goes after CLEAR_VOTES_NEEDED different people
+// vote (so one person can't remove a real flood warning as a prank) — or straight away when the vote comes from the
+// person who posted the report, or from the admin.
+const CLEAR_VOTES_NEEDED = 3;
 app.post('/api/reports/:id/clear', rateLimitWrites, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid report id.' });
@@ -499,6 +504,15 @@ app.post('/api/reports/:id/clear', rateLimitWrites, async (req, res) => {
     if (!original) return res.status(404).json({ error: 'Report not found.' });
     if (original.status === 'clear') return res.status(400).json({ error: 'That report is already clear.' });
     const signedIn = await getSignedInUser(req);
+    const decoded = signedIn?.decoded ?? await verifyToken(req);
+    const trusted = isAdmin({ decoded }) || (signedIn && original.userId != null && original.userId === signedIn.dbUser.id);
+
+    await db.insert(reportClearVotes).values({ reportId: id, voterKey: voterKey(req, decoded) }).onConflictDoNothing();
+    const [{ votes }] = await db.select({ votes: sql`count(*)::int`.mapWith(Number) }).from(reportClearVotes).where(eq(reportClearVotes.reportId, id));
+    if (!trusted && votes < CLEAR_VOTES_NEEDED) {
+      return res.json({ id, cleared: false, votes, needed: CLEAR_VOTES_NEEDED });
+    }
+
     const note = cleanText(req.body?.details, 160);
     const [created] = await db.insert(reports).values({
       type: original.type,
@@ -512,7 +526,9 @@ app.post('/api/reports/:id/clear', rateLimitWrites, async (req, res) => {
       who: posterName(signedIn, cleanText(req.body?.who, 40)),
       time: new Date(),
     }).returning();
-    res.status(201).json(created);
+    // Votes are used up; the original now shows as "later reported clear".
+    await db.delete(reportClearVotes).where(eq(reportClearVotes.reportId, id));
+    res.status(201).json({ id, cleared: true, votes: Math.max(votes, CLEAR_VOTES_NEEDED), needed: CLEAR_VOTES_NEEDED, report: { ...created, hasPhoto: false, confirmCount: 0, clearVotes: 0 } });
   } catch (err) {
     console.error('Failed to mark report clear:', err);
     res.status(500).json({ error: 'Failed to update report' });

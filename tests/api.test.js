@@ -79,6 +79,29 @@ test('"I see it too" counts one vote per person', async () => {
   assert.equal((await app.api('POST', `/api/reports/${r.id}/confirm`, { ip: b })).data.confirmCount, 2);
 });
 
+test('"Dah surut" needs 3 different people before a flood is marked clear', async () => {
+  const { data: r } = await app.api('POST', '/api/reports', { ip: freshIp(), body: flood({ area: 'TEST surut spot' }) });
+  const vote = ip => app.api('POST', `/api/reports/${r.id}/clear`, { ip, body: {} });
+  const a = freshIp(), b = freshIp(), c = freshIp();
+  let res = await vote(a);
+  assert.deepEqual([res.status, res.data.cleared, res.data.votes, res.data.needed], [200, false, 1, 3]);
+  res = await vote(a); // same person again: still 1
+  assert.equal(res.data.votes, 1);
+  res = await vote(b);
+  assert.deepEqual([res.data.cleared, res.data.votes], [false, 2]);
+  const listed = (await app.api('GET', '/api/reports')).data.find(x => x.id === r.id);
+  assert.equal(listed.clearVotes, 2, 'vote count is shown on the report');
+  res = await vote(c);
+  assert.equal(res.status, 201);
+  assert.equal(res.data.cleared, true);
+  assert.equal(res.data.report.status, 'clear');
+  assert.equal(res.data.report.area, 'TEST surut spot');
+  assert.equal(res.data.report.lat, r.lat);
+  const after = (await app.api('GET', '/api/reports')).data;
+  assert.ok(after.some(x => x.id === res.data.report.id && x.status === 'clear'));
+  assert.equal(after.find(x => x.id === r.id).clearVotes, 0, 'votes are used up once cleared');
+});
+
 test('flagging needs a Google sign-in; 3 signed-in accounts hide a report and its photo', async () => {
   const { data: r } = await app.api('POST', '/api/reports', { ip: freshIp(), body: flood({ area: 'TEST flag me', photo: { thumb: tinyJpeg, full: tinyJpeg } }) });
   const visible = async () => (await app.api('GET', '/api/reports')).data.some(x => x.id === r.id);

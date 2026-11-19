@@ -45,6 +45,13 @@ export const reportConfirmations = pgTable('report_confirmations', {
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => [primaryKey({ columns: [t.reportId, t.voterKey] })]);
 
+// "Dah surut" (now clear) votes: one per voter per report. A flood report is only marked clear after enough votes.
+export const reportClearVotes = pgTable('report_clear_votes', {
+  reportId: integer('report_id').notNull().references(() => reports.id, { onDelete: 'cascade' }),
+  voterKey: text('voter_key').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => [primaryKey({ columns: [t.reportId, t.voterKey] })]);
+
 // "Report a problem" flags: one per voter per report. Enough flags hide the report until the admin reviews it.
 export const reportFlags = pgTable('report_flags', {
   reportId: integer('report_id').notNull().references(() => reports.id, { onDelete: 'cascade' }),

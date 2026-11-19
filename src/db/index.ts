@@ -100,6 +100,12 @@ async function runSchemaSql(conn: { query: (sql: string) => Promise<unknown> }) 
     CREATE INDEX IF NOT EXISTS reports_user_id_idx ON reports (user_id);
     ALTER TABLE reports ADD COLUMN IF NOT EXISTS water_level text;
     ALTER TABLE reports ADD COLUMN IF NOT EXISTS reviewed boolean DEFAULT false;
+    CREATE TABLE IF NOT EXISTS report_clear_votes (
+      report_id integer NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+      voter_key text NOT NULL,
+      created_at timestamp DEFAULT now(),
+      PRIMARY KEY (report_id, voter_key)
+    );
     CREATE TABLE IF NOT EXISTS report_flags (
       report_id integer NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
       voter_key text NOT NULL,

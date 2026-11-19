@@ -483,7 +483,8 @@
         map_error: 'Peta tak dapat dimuat. Laporan masih ada di bawah.',
         t_pick: 'Tekan peta untuk pilih tempat.', t_picked: 'Tempat dipilih ✓',
         t_posted: 'Laporan dihantar. Terima kasih!',
-        confirm_clear: 'Tandakan "{area}" dah surut?', t_cleared: 'Terima kasih! Ditanda dah surut.',
+        confirm_clear: 'Tandakan "{area}" dah surut? Pin banjir hanya dibuang bila 3 orang tandakan surut.', t_cleared: 'Terima kasih! Ditanda dah surut.',
+        act_clear_n: 'Dah surut ({n}/3)', act_clear_voted: '✅ Anda dah tanda ({n}/3)', t_clear_vote: 'Terima kasih! {n}/3 orang dah tanda surut. Pin banjir dibuang bila cukup 3 orang.',
         confirm_remove: 'Padam laporan "{area}"? Tak boleh batal.', t_removed: 'Laporan dipadam.',
         t_network: 'Masalah internet. Cuba lagi.', t_failed: 'Tak berjaya. Cuba lagi.',
         t_photo_wait: 'Sedang sediakan gambar…', t_photo_bad: 'Tak dapat guna gambar ni. Cuba gambar lain.',
@@ -579,7 +580,8 @@
         map_error: 'The map didn’t load. Reports are still listed below.',
         t_pick: 'Tap the map to pick the spot.', t_picked: 'Spot picked ✓',
         t_posted: 'Report sent. Thank you!',
-        confirm_clear: 'Mark "{area}" as clear now?', t_cleared: 'Thanks! Marked as clear.',
+        confirm_clear: 'Mark "{area}" as clear now? The flood pin is removed once 3 people mark it clear.', t_cleared: 'Thanks! Marked as clear.',
+        act_clear_n: 'Now clear ({n}/3)', act_clear_voted: '✅ You marked it ({n}/3)', t_clear_vote: 'Thanks! {n}/3 people have marked it clear. The flood pin goes once 3 do.',
         confirm_remove: 'Delete the report "{area}"? This can’t be undone.', t_removed: 'Report deleted.',
         t_network: 'Internet problem. Please try again.', t_failed: 'That didn’t work. Please try again.',
         t_photo_wait: 'Getting the photo ready…', t_photo_bad: 'Can’t use this photo. Please try another one.',
@@ -768,6 +770,8 @@
     const readJson=(k,fallback)=>{try{return JSON.parse(localStorage.getItem(k))??fallback}catch{return fallback}};
     const writeJson=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
     let confirmedIds=new Set(readJson(CONFIRMED_KEY,[]));
+    const CLEAR_VOTED_KEY='pa-clear-voted';
+    let clearVotedIds=new Set(readJson(CLEAR_VOTED_KEY,[]));
     const FLAGGED_KEY='pa-flagged';
     let flaggedIds=new Set(readJson(FLAGGED_KEY,[]));
 
@@ -987,7 +991,11 @@
           const done=confirmedIds.has(r.id);
           actions.push(`<button class="mini-btn${done?' done':''}" type="button" data-act="confirm" data-id="${esc(r.id)}"${done?' disabled':''}>${esc(t(done?'act_confirmed':'act_confirm'))}</button>`);
         }
-        if(r.status!=='clear'&&!later&&r.type!=='weather')actions.push(`<button class="mini-btn good" type="button" data-act="clear" data-id="${esc(r.id)}">${esc(t('act_clear'))}</button>`);
+        if(r.status!=='clear'&&!later&&r.type!=='weather'){
+          const n=r.clearVotes||0, voted=clearVotedIds.has(r.id);
+          const label=voted?t('act_clear_voted',{n}):n>0?t('act_clear_n',{n}):t('act_clear');
+          actions.push(`<button class="mini-btn good${voted?' done':''}" type="button" data-act="clear" data-id="${esc(r.id)}"${voted?' disabled':''}>${esc(label)}</button>`);
+        }
         actions.push(`<button class="mini-btn wa" type="button" data-act="share" data-id="${esc(r.id)}">${esc(t('act_share'))}</button>`);
         const flagged=flaggedIds.has(r.id);
         actions.push(`<button class="mini-btn flag${flagged?' done':''}" type="button" data-act="flag" data-id="${esc(r.id)}"${flagged?' disabled':''}>${esc(t(flagged?'act_flagged':'act_flag'))}</button>`);
@@ -1010,9 +1018,16 @@
       try{
         const res=await fetch(`/api/reports/${id}/clear`,{method:'POST',headers:await authHeaders(true),body:JSON.stringify({who:document.getElementById('rName').value.trim()})});
         if(!res.ok){toast(await errorMessage(res));return}
-        reports.unshift(await res.json());
+        const data=await res.json();
+        if(data.cleared){
+          reports.unshift(data.report);
+          toast(t('t_cleared'));
+        }else{
+          r.clearVotes=data.votes;
+          clearVotedIds.add(id);writeJson(CLEAR_VOTED_KEY,[...clearVotedIds].slice(-300));
+          toast(t('t_clear_vote',{n:data.votes}),6000);
+        }
         renderReports();
-        toast(t('t_cleared'));
       }catch{toast(t('t_network'))}
     }
 
