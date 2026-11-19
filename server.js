@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createHash, timingSafeEqual } from 'crypto';
-import { db } from './src/db/index.ts';
+import { db, ensureSchema } from './src/db/index.ts';
 import { reports, users } from './src/db/schema.ts';
 import { desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { adminAuth } from './src/lib/firebase-admin.ts';
@@ -139,28 +139,37 @@ function posterName(signedIn, typedName) {
 // ---------- seed ----------
 
 async function seedInitialReports() {
-  try {
-    const existing = await db.select().from(reports).limit(1);
-    if (existing.length === 0) {
-      console.log('Seeding initial community reports...');
-      const initial = [
-        { type: 'road', status: 'clear', area: 'Persiaran Mokhtar Dahari', details: 'Clear; ordinary traffic. Community update from the morning commute.', who: 'Community member', time: new Date('2026-11-19T09:18:00'), lat: 3.212, lng: 101.434, approximate: true },
-        { type: 'road', status: 'clear', area: 'Avatar route', details: 'Reported passable in both directions. Conditions may have changed since this post.', who: 'Community member', time: new Date('2026-11-19T06:19:00'), lat: 3.222, lng: 101.447, approximate: true },
-        { type: 'flood', status: 'danger', area: 'Fasa 1 traffic-light junction', details: 'Flooding reported at the junction; a later message suggested an alternate route. Treat this as an old observation.', who: 'Community member', time: new Date('2026-11-18T17:03:00'), lat: 3.212, lng: 101.434, approximate: true },
-        { type: 'flood', status: 'danger', area: 'Alam Suria–Jeram, before Simpang 4', details: 'Reporter said water was around shin height and rising. This is a previous-day report.', who: 'Community member', time: new Date('2026-11-18T16:14:00'), lat: 3.241, lng: 101.413, approximate: true },
-        { type: 'weather', status: 'uncertain', area: 'Hillpark', details: 'Heavy rain reported in the evening. No current water-level confirmation in the chat excerpt.', who: 'Community member', time: new Date('2026-11-18T21:38:00'), lat: 3.211, lng: 101.462, approximate: true }
-      ];
-      for (const r of initial) {
-        await db.insert(reports).values(r);
-      }
-      console.log('Seed reports inserted successfully.');
+  await ensureSchema();
+  const existing = await db.select().from(reports).limit(1);
+  if (existing.length === 0) {
+    console.log('Seeding initial community reports...');
+    const initial = [
+      { type: 'road', status: 'clear', area: 'Persiaran Mokhtar Dahari', details: 'Clear; ordinary traffic. Community update from the morning commute.', who: 'Community member', time: new Date('2026-11-19T09:18:00'), lat: 3.212, lng: 101.434, approximate: true },
+      { type: 'road', status: 'clear', area: 'Avatar route', details: 'Reported passable in both directions. Conditions may have changed since this post.', who: 'Community member', time: new Date('2026-11-19T06:19:00'), lat: 3.222, lng: 101.447, approximate: true },
+      { type: 'flood', status: 'danger', area: 'Fasa 1 traffic-light junction', details: 'Flooding reported at the junction; a later message suggested an alternate route. Treat this as an old observation.', who: 'Community member', time: new Date('2026-11-18T17:03:00'), lat: 3.212, lng: 101.434, approximate: true },
+      { type: 'flood', status: 'danger', area: 'Alam Suria–Jeram, before Simpang 4', details: 'Reporter said water was around shin height and rising. This is a previous-day report.', who: 'Community member', time: new Date('2026-11-18T16:14:00'), lat: 3.241, lng: 101.413, approximate: true },
+      { type: 'weather', status: 'uncertain', area: 'Hillpark', details: 'Heavy rain reported in the evening. No current water-level confirmation in the chat excerpt.', who: 'Community member', time: new Date('2026-11-18T21:38:00'), lat: 3.211, lng: 101.462, approximate: true }
+    ];
+    for (const r of initial) {
+      await db.insert(reports).values(r);
     }
-  } catch (err) {
-    console.warn('Failed to seed initial reports (database might still be starting):', err.message);
+    console.log('Seed reports inserted successfully.');
   }
 }
 
-setTimeout(seedInitialReports, 2000);
+// Set up tables and seed data, retrying while the database wakes up (Neon's free tier sleeps when idle).
+async function prepareDatabase(attempt = 1) {
+  try {
+    await seedInitialReports();
+    console.log('Database ready.');
+  } catch (err) {
+    const retryIn = Math.min(60, 5 * attempt);
+    console.warn(`Database not ready (attempt ${attempt}): ${err.cause?.message || err.message}. Retrying in ${retryIn}s.`);
+    if (attempt < 10) setTimeout(() => prepareDatabase(attempt + 1), retryIn * 1000).unref();
+  }
+}
+
+setTimeout(prepareDatabase, 1000);
 
 // ---------- API ----------
 

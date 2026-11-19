@@ -9,7 +9,7 @@ Residents pin a report on the map with the area, what they're seeing, and when. 
 ## Features
 
 - **Map**: [MapLibre GL JS](https://maplibre.org/) with free [OpenFreeMap](https://openfreemap.org/) tiles. No API key and no usage limits.
-- **Reports**: flood, road, or rain updates, with an optional exact map point. Reports are stored in PostgreSQL (Cloud SQL) via Drizzle ORM.
+- **Reports**: flood, road, or rain updates, with an optional exact map point. Reports are stored in PostgreSQL via Drizzle ORM. Any Postgres works; the free tier of [Neon](https://neon.tech) is recommended.
 - **Now clear**: anyone can mark a flood or road report as passable. This posts a follow-up "clear" report, and the original is shown as *later reported clear* and taken off the map.
 - **Freshness**: reports older than 2 hours fade. Reports older than 24 hours are hidden behind a "Show older reports" button.
 - **Google Sign-In (optional)**: signed-in reports show a ✓ and always use the poster's Google name. Signed-in users can remove their own reports.
@@ -27,6 +27,14 @@ Open `/admin` (an **Admin** link appears in the header when the admin is signed 
 
 Every `/api/admin/*` endpoint checks the admin's Google sign-in on the server; the page itself holds no special access.
 
+## Database setup (free, with Neon)
+
+1. Create a free account at [neon.tech](https://neon.tech) and a project in the **Singapore** region (closest to Malaysia).
+2. Copy the **pooled** connection string from the dashboard (*Connect* → enable *Connection pooling*).
+3. Set it as the `DATABASE_URL` secret/environment variable and restart the app.
+
+On start-up the server creates the tables if they don't exist and adds a few sample reports, so a brand-new database needs no extra steps. Neon's free tier sleeps when idle; the first request after a quiet period takes a second or two longer.
+
 ## Running
 
 Requires Node.js 22.18 or newer, because the server imports TypeScript files directly.
@@ -40,8 +48,8 @@ npm start
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `SQL_HOST`, `SQL_USER`, `SQL_PASSWORD`, `SQL_DB_NAME` | Yes | PostgreSQL connection |
-| `SQL_ADMIN_USER`, `SQL_ADMIN_PASSWORD` | For migrations | Used by `drizzle-kit` (`src/db/drizzle.config.ts`) |
+| `DATABASE_URL` | Yes (or the `SQL_*` set below) | Postgres connection string, e.g. Neon's *pooled* connection string ending in `?sslmode=require` |
+| `SQL_HOST`, `SQL_USER`, `SQL_PASSWORD`, `SQL_DB_NAME` | Only without `DATABASE_URL` | Separate connection settings (the original Cloud SQL setup) |
 | `PORT` | No (default `3000`) | Port to listen on; set automatically by Cloud Run and most hosts |
 
 Firebase project settings come from `firebase-applet-config.json`. These are public web-app values, not secrets.
