@@ -22,6 +22,8 @@
     .pulse{width:7px;height:7px;background:#9bd98c;display:inline-block;border-radius:50%;margin-right:6px;box-shadow:0 0 0 4px #9bd98c22}
     .auth-btn{background:#1e6658;color:white;border:1px solid #328272;padding:7px 12px;border-radius:10px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px}
     .auth-btn:hover{background:#174f44}
+    .admin-link{color:#d3ef72;font-weight:750;text-decoration:none;border:1px solid #49635c;border-radius:9px;padding:6px 10px}
+    .admin-link:hover{background:#1b3c3b}
     .shell{max-width:1200px;margin:auto;padding:32px 24px 60px}
     .welcome{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;margin-bottom:22px}
     .eyebrow{color:var(--green);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}
@@ -88,6 +90,7 @@
     .form-buttons{display:flex;justify-content:flex-end;gap:8px;margin-top:3px}
     .toast{position:fixed;bottom:18px;left:50%;transform:translate(-50%,20px);opacity:0;background:#153a35;color:white;padding:11px 16px;border-radius:12px;font-size:12px;font-weight:650;box-shadow:var(--shadow);transition:.24s;z-index:100;pointer-events:none}
     .toast.show{opacity:1;transform:translate(-50%,0)}
+    .toast{width:max-content;max-width:min(440px,calc(100vw - 32px));text-align:center;line-height:1.4}
     .auth-user{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#e3f2d2}
     .auth-user img{width:26px;height:26px;border-radius:50%;object-fit:cover}
     .auth-btn.signout{background:#b9493e;border-color:#d76255}
@@ -113,6 +116,7 @@
     </div>
     <div class="top-right">
       <span><i class="pulse"></i>Community Board</span>
+      <a class="admin-link" id="adminLink" href="/admin" hidden>Admin</a>
       <div id="authContainer">
         <button class="auth-btn" id="googleSignInBtn">Sign in with Google</button>
       </div>
@@ -209,15 +213,32 @@
     const authContainer = document.getElementById('authContainer');
     const rNameInput = document.getElementById('rName');
 
+    // Google refuses sign-in inside app web views (WhatsApp, Facebook, Instagram, etc.).
+    const IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|TikTok|Snapchat|Twitter|; wv\)/i.test(navigator.userAgent);
+
+    const SIGN_IN_ERRORS = {
+      'auth/popup-blocked': 'Your browser blocked the sign-in window. Allow pop-ups for this site, then try again.',
+      'auth/operation-not-supported-in-this-environment': 'Sign-in isn’t supported here. Open this page in Chrome or Safari.',
+      'auth/unauthorized-domain': 'Sign-in isn’t enabled for this web address yet.',
+      'auth/network-request-failed': 'Network problem during sign-in. Check your connection and try again.',
+      'auth/too-many-requests': 'Too many sign-in attempts. Please wait a minute and try again.',
+      'auth/web-storage-unsupported': 'Your browser is blocking storage needed for sign-in. Turn off private mode or allow cookies, then try again.',
+      'auth/internal-error': 'Google sign-in had a problem. Open this page in Chrome or Safari and try again.',
+    };
+
     async function signIn() {
+      if (IN_APP_BROWSER) {
+        window._showToast('Google sign-in doesn’t work inside this app. Open the page in Chrome or Safari (⋮ or share menu → Open in browser).', 7000);
+        return;
+      }
       try {
         await signInWithPopup(auth, provider);
         window._showToast('Signed in.');
       } catch (err) {
-        if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
-          console.error('Sign-in error:', err);
-          window._showToast('Sign-in failed.');
-        }
+        if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') return;
+        console.error('Sign-in error:', err);
+        const message = SIGN_IN_ERRORS[err?.code] || `Sign-in failed (${err?.code || 'unknown error'}). Please try again.`;
+        window._showToast(message, 7000);
       }
     }
 
@@ -281,7 +302,7 @@
     let mapInstance=null, reportMarkers=new Map(), draftMarker=null, selectedCoordinates=null, waitingForPin=false;
 
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),3200)}
+    function toast(message,duration=3200){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),duration)}
     window._showToast=toast;
 
     const ageMs=r=>Date.now()-new Date(r.time).getTime();
@@ -318,6 +339,7 @@
       if(signedIn){
         try{const res=await fetch('/api/me',{headers:await authHeaders()});if(res.ok)me=await res.json()}catch{}
       }
+      document.getElementById('adminLink').hidden=!me.isAdmin;
       renderReports();
     };
 

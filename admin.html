@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#102b2c" />
+  <title>Admin · Puncak Alam Community Alerts</title>
+  <style>
+    :root{--ink:#122b2b;--muted:#71807c;--paper:#f5f6f0;--line:#e5e9e1;--green:#1e6658;--green2:#dff1e7;--lime:#d3ef72;--red:#b9493e;--redbg:#fff0ee;--amber:#816b29;--amberbg:#fff7df;--shadow:0 16px 48px #17333112;--radius:18px}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    a{color:var(--green)}
+    .top{background:#102b2c;color:#f7f8f1;padding:13px max(20px,calc((100vw - 1200px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:750;letter-spacing:-.02em}
+    .brand-mark{width:34px;height:34px;border-radius:11px;background:var(--lime);display:grid;place-items:center;color:#133735}
+    .brand-mark svg{width:20px}
+    .brand small{display:block;color:#a9beb5;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+    .top-right{display:flex;align-items:center;gap:10px;font-size:12px;color:#d1ddd8}
+    .top-right a{color:#d1ddd8;text-decoration:none;font-weight:650}
+    .top-right a:hover{color:#fff}
+    .auth-btn{background:#1e6658;color:#fff;border:1px solid #328272;padding:7px 12px;border-radius:10px;font-size:11px;font-weight:700}
+    .auth-btn.signout{background:#b9493e;border-color:#d76255}
+    .shell{max-width:1200px;margin:auto;padding:26px 20px 60px}
+    h1{font-size:28px;letter-spacing:-.04em;margin:0 0 4px}
+    .sub{color:var(--muted);font-size:13px;margin:0 0 20px}
+    .gate{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:34px 24px;text-align:center;box-shadow:var(--shadow);max-width:520px;margin:40px auto}
+    .gate h2{margin:0 0 6px;font-size:19px}
+    .gate p{color:var(--muted);font-size:13px;margin:0 0 16px}
+    .btn{border:0;border-radius:11px;background:var(--green);color:#fff;padding:10px 15px;font-weight:700;font-size:13px}
+    .btn:hover{background:#174f44}
+    .btn:disabled{opacity:.5;cursor:default}
+    .btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}
+    .btn.secondary:hover{background:#f8faf6}
+    .btn.danger{background:var(--red)}
+    .btn.danger:hover{background:#9b3c33}
+    .btn.small{font-size:11px;padding:7px 10px;border-radius:9px}
+    .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+    .card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:13px 15px}
+    .card .label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#75827e}
+    .card strong{display:block;font-size:22px;letter-spacing:-.03em;margin-top:2px}
+    .card small{display:block;font-size:11px;color:var(--muted);margin-top:1px;overflow-wrap:anywhere}
+    .card.bad{background:var(--redbg);border-color:#f1d3cf}
+    .card.bad strong{color:var(--red)}
+    .card.good strong{color:#2a7a58}
+    .tabs{display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+    .tab{border:0;background:none;padding:10px 12px;font-size:13px;font-weight:700;color:#62716c;border-bottom:2px solid transparent;margin-bottom:-1px}
+    .tab.active{color:var(--ink);border-bottom-color:var(--green)}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:14px;border-bottom:1px solid var(--line)}
+    .toolbar input[type=search]{flex:1;min-width:180px}
+    .toolbar input,.toolbar select{border:1px solid #dfe5dc;border-radius:9px;padding:8px 10px;font-size:12px;background:#fff;color:var(--ink)}
+    .toolbar .spacer{flex:1}
+    .count{font-size:12px;color:var(--muted)}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{text-align:left;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#75827e;padding:9px 10px;border-bottom:1px solid var(--line);background:#fafbf8;white-space:nowrap}
+    td{padding:10px;border-bottom:1px solid #eef1ea;vertical-align:top}
+    tr:last-child td{border-bottom:0}
+    tr.selected td{background:#f3f9f5}
+    td.check,th.check{width:32px}
+    .area{font-weight:700}
+    .details{color:#52615d;max-width:340px}
+    .meta{color:var(--muted);font-size:11px;white-space:nowrap}
+    .pill{display:inline-block;border-radius:6px;padding:3px 7px;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+    .pill.danger{background:#fff1e9;color:#a55435}
+    .pill.uncertain{background:var(--amberbg);color:var(--amber)}
+    .pill.clear{background:#e8f5ed;color:#327451}
+    .pill.type{background:#eef2ee;color:#4d6660}
+    .row-actions{display:flex;gap:5px;white-space:nowrap}
+    .empty{padding:28px;text-align:center;color:var(--muted);font-size:13px}
+    .error{padding:13px 14px;background:var(--redbg);color:#8d3a31;font-size:12px}
+    .maint{padding:18px;display:grid;gap:18px}
+    .maint section{border:1px solid var(--line);border-radius:14px;padding:16px}
+    .maint h3{margin:0 0 4px;font-size:14px}
+    .maint p{margin:0 0 12px;color:var(--muted);font-size:12px}
+    .maint .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .maint input{border:1px solid #dfe5dc;border-radius:9px;padding:8px 10px;width:90px}
+    pre.dberr{white-space:pre-wrap;overflow-wrap:anywhere;background:#fbf6f5;border:1px solid #f1d3cf;border-radius:10px;padding:10px;font-size:11px;color:#8d3a31;margin:10px 0 0}
+    dialog{border:0;padding:0;border-radius:18px;width:min(520px,calc(100vw - 26px));box-shadow:0 22px 90px #0c202c55;color:var(--ink)}
+    dialog::backdrop{background:#0d2221a8}
+    .modal-head{padding:17px 20px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:start}
+    .modal-head h2{margin:0;font-size:17px}
+    .x{border:0;background:#f2f4ee;border-radius:9px;width:30px;height:30px;font-size:17px;color:#52615d}
+    .form{padding:16px 20px 20px;display:grid;gap:12px}
+    .field label{display:block;font-size:11px;font-weight:750;margin-bottom:5px}
+    .field input,.field select,.field textarea{width:100%;border:1px solid #dfe5dc;border-radius:10px;padding:9px 10px;font-size:13px;color:var(--ink);background:#fff}
+    .field textarea{min-height:80px;resize:vertical}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-buttons{display:flex;justify-content:flex-end;gap:8px}
+    .toast{position:fixed;bottom:18px;left:50%;transform:translate(-50%,20px);opacity:0;background:#153a35;color:#fff;padding:11px 16px;border-radius:12px;font-size:12px;font-weight:650;transition:.24s;z-index:100;pointer-events:none;width:max-content;max-width:min(440px,calc(100vw - 32px));text-align:center}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    [hidden]{display:none!important}
+    @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:700px){
+      .top{padding:11px 14px}
+      .top-right .who{display:none}
+      .shell{padding:20px 14px 40px}
+      thead{display:none}
+      table,tbody,tr,td{display:block;width:100%}
+      tr{border-bottom:1px solid var(--line);padding:8px 4px;position:relative}
+      td{border:0;padding:3px 8px}
+      td.check{position:absolute;right:6px;top:8px;width:auto}
+      .details{max-width:none}
+      .form-row{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5 20 6v5.7c0 5-3.4 8.1-8 9.8-4.6-1.7-8-4.8-8-9.8V6l8-3.5Z" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 13.2c1.8-1.2 3.1-1.2 4.8 0 1.7 1.2 3.1 1.2 5 0M8.2 16.1c1.2-.8 2.2-.8 3.4 0 1.2.8 2.2.8 3.5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+      <span>Puncak Alam Alerts<small>Admin</small></span>
+    </div>
+    <div class="top-right">
+      <a href="/">← Back to map</a>
+      <span class="who" id="whoAmI"></span>
+      <span id="authSlot"></span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="gate" id="gateLoading"><h2>Checking access…</h2><p>One moment.</p></div>
+    <div class="gate" id="gateSignIn" hidden><h2>Admin sign-in</h2><p>Sign in with the admin Google account to manage reports.</p><button class="btn" type="button" id="gateSignInBtn">Sign in with Google</button></div>
+    <div class="gate" id="gateDenied" hidden><h2>Not an admin account</h2><p>This page is only for the site admin. You can still post and manage your own reports on the map.</p><a class="btn secondary" href="/">Back to the map</a></div>
+
+    <div id="app" hidden>
+      <h1>Admin</h1>
+      <p class="sub">Manage every report and see who is posting.</p>
+
+      <div class="cards" id="cards"></div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab active" type="button" data-tab="reports" role="tab">Reports</button>
+        <button class="tab" type="button" data-tab="users" role="tab">Users</button>
+        <button class="tab" type="button" data-tab="maintenance" role="tab">Maintenance</button>
+      </div>
+
+      <div class="panel" id="tab-reports">
+        <div class="toolbar">
+          <input type="search" id="q" placeholder="Search area, details, name or email…" aria-label="Search reports" />
+          <select id="fType" aria-label="Type"><option value="">All types</option><option value="flood">Flood</option><option value="road">Road</option><option value="weather">Weather</option></select>
+          <select id="fStatus" aria-label="Status"><option value="">All statuses</option><option value="danger">Flooded</option><option value="uncertain">Needs confirmation</option><option value="clear">Clear</option></select>
+          <select id="fAge" aria-label="Age"><option value="">Any time</option><option value="24">Last 24 hours</option><option value="168">Last 7 days</option><option value="-168">Older than 7 days</option></select>
+          <span class="spacer"></span>
+          <span class="count" id="reportCount"></span>
+          <button class="btn danger small" type="button" id="deleteSelected" disabled>Delete selected</button>
+        </div>
+        <div id="reportsError" class="error" hidden></div>
+        <table>
+          <thead><tr><th class="check"><input type="checkbox" id="selectAll" aria-label="Select all shown" /></th><th>When</th><th>Report</th><th>Type / status</th><th>Posted by</th><th></th></tr></thead>
+          <tbody id="reportRows"></tbody>
+        </table>
+      </div>
+
+      <div class="panel" id="tab-users" hidden>
+        <div id="usersError" class="error" hidden></div>
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Joined</th><th>Reports</th><th>Last report</th><th></th></tr></thead>
+          <tbody id="userRows"></tbody>
+        </table>
+      </div>
+
+      <div class="panel" id="tab-maintenance" hidden>
+        <div class="maint">
+          <section>
+            <h3>Database</h3>
+            <p>Checks the connection to Cloud SQL and shows the exact error if it's failing.</p>
+            <div class="row"><button class="btn secondary small" type="button" id="recheckDb">Check again</button><span class="count" id="dbSummary"></span></div>
+            <pre class="dberr" id="dbError" hidden></pre>
+          </section>
+          <section>
+            <h3>Clear out old reports</h3>
+            <p>Permanently deletes every report older than the number of days you choose.</p>
+            <div class="row"><label for="purgeDays" class="count">Older than</label><input type="number" id="purgeDays" min="1" max="365" value="30" /><span class="count">days</span><button class="btn danger small" type="button" id="purgeBtn">Delete old reports</button></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="editDialog">
+    <form id="editForm">
+      <div class="modal-head"><h2>Edit report</h2><button class="x" type="button" data-close aria-label="Close">×</button></div>
+      <div class="form">
+        <div class="form-row">
+          <div class="field"><label for="eType">Type</label><select id="eType"><option value="flood">Flood / water level</option><option value="road">Road condition</option><option value="weather">Heavy rain</option></select></div>
+          <div class="field"><label for="eStatus">Status</label><select id="eStatus"><option value="danger">Flooded / rising water</option><option value="uncertain">Use caution / not confirmed</option><option value="clear">Clear</option></select></div>
+        </div>
+        <div class="field"><label for="eArea">Area or road</label><input id="eArea" required maxlength="70" /></div>
+        <div class="field"><label for="eDetails">Details</label><textarea id="eDetails" required maxlength="240"></textarea></div>
+        <div class="field"><label for="eWho">Shown as posted by</label><input id="eWho" required maxlength="40" /></div>
+        <div class="form-buttons"><button class="btn secondary" type="button" data-close>Cancel</button><button class="btn" type="submit">Save changes</button></div>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
+
+    const auth = getAuth(initializeApp(firebaseConfig));
+    const provider = new GoogleAuthProvider();
+    window._getIdToken = async () => auth.currentUser ? await auth.currentUser.getIdToken() : null;
+    window._signIn = async () => {
+      try { await signInWithPopup(auth, provider); }
+      catch (err) {
+        if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') return;
+        console.error('Sign-in error:', err);
+        window._toast(err?.code === 'auth/popup-blocked' ? 'Your browser blocked the sign-in window. Allow pop-ups for this site, then try again.' : `Sign-in failed (${err?.code || 'unknown error'}).`, 6000);
+      }
+    };
+    window._signOut = () => signOut(auth);
+    onAuthStateChanged(auth, user => window._onAuth(user ? { name: user.displayName || user.email } : null));
+  </script>
+
+  <script>
+    const HOUR = 3600000;
+    const STATUS_LABEL = { danger: 'Flooded', uncertain: 'Needs confirmation', clear: 'Clear' };
+    let reports = [], users = [], selected = new Set(), editingId = null;
+
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    function toast(msg, ms = 3200) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(window._tt); window._tt = setTimeout(() => t.classList.remove('show'), ms); }
+    window._toast = toast;
+    const fmtTime = iso => iso ? new Date(iso).toLocaleString('en-MY', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '—';
+    function ago(iso) { const m = Math.floor((Date.now() - new Date(iso)) / 60000); if (m < 60) return `${Math.max(m, 0)} min ago`; const h = Math.floor(m / 60); if (h < 24) return `${h} hr ago`; return `${Math.floor(h / 24)} d ago`; }
+
+    async function api(path, { method = 'GET', body } = {}) {
+      const headers = {};
+      const token = await window._getIdToken?.();
+      if (token) headers.Authorization = `Bearer ${token}`;
+      if (body !== undefined) headers['Content-Type'] = 'application/json';
+      const res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      const data = res.status === 204 ? null : await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
+      return data;
+    }
+
+    // ----- access gate -----
+
+    function showGate(which) {
+      for (const id of ['gateLoading', 'gateSignIn', 'gateDenied']) $(id).hidden = id !== which;
+      $('app').hidden = which !== null;
+    }
+
+    function renderAuthSlot(user) {
+      const slot = $('authSlot'); slot.replaceChildren();
+      $('whoAmI').textContent = user ? user.name : '';
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = user ? 'auth-btn signout' : 'auth-btn';
+      b.textContent = user ? 'Sign out' : 'Sign in';
+      b.onclick = user ? () => window._signOut() : () => window._signIn();
+      slot.append(b);
+    }
+
+    window._onAuth = async user => {
+      renderAuthSlot(user);
+      if (!user) return showGate('gateSignIn');
+      showGate('gateLoading');
+      try {
+        const me = await api('/api/me');
+        if (!me.isAdmin) return showGate('gateDenied');
+        showGate(null);
+        loadAll();
+      } catch {
+        showGate('gateDenied');
+      }
+    };
+    $('gateSignInBtn').onclick = () => window._signIn();
+
+    // ----- data -----
+
+    async function loadAll() {
+      await Promise.all([loadHealth(), loadReports(), loadUsers()]);
+    }
+
+    let health = null;
+    async function loadHealth() {
+      try { health = (await api('/api/admin/health')).db; }
+      catch (err) { health = { ok: false, error: err.message }; }
+      $('dbSummary').textContent = health.ok ? `Connected · ${health.ms} ms · ${health.reports} reports stored` : 'Not connected';
+      $('dbError').hidden = health.ok;
+      $('dbError').textContent = health.ok ? '' : health.error || 'Unknown error';
+      renderCards();
+    }
+
+    async function loadReports() {
+      try {
+        reports = await api('/api/admin/reports');
+        $('reportsError').hidden = true;
+      } catch (err) {
+        reports = [];
+        $('reportsError').hidden = false;
+        $('reportsError').textContent = `Couldn't load reports: ${err.message}. Check the Database section under Maintenance.`;
+      }
+      selected = new Set([...selected].filter(id => reports.some(r => r.id === id)));
+      renderReports(); renderCards();
+    }
+
+    async function loadUsers() {
+      try {
+        users = await api('/api/admin/users');
+        $('usersError').hidden = true;
+      } catch (err) {
+        users = [];
+        $('usersError').hidden = false;
+        $('usersError').textContent = `Couldn't load users: ${err.message}.`;
+      }
+      renderUsers(); renderCards();
+    }
+
+    // ----- rendering -----
+
+    function renderCards() {
+      const day = reports.filter(r => Date.now() - new Date(r.time) < 24 * HOUR);
+      const activeFloods = day.filter(r => r.status === 'danger').length;
+      const signedIn = reports.filter(r => r.userId != null).length;
+      const db = !health ? { cls: '', value: '…', note: 'Checking' }
+        : health.ok ? { cls: 'good', value: 'OK', note: `${health.ms} ms` }
+        : { cls: 'bad', value: 'Down', note: 'See Maintenance' };
+      const cards = [
+        { label: 'Database', value: db.value, note: db.note, cls: db.cls },
+        { label: 'Reports', value: reports.length, note: `${signedIn} from signed-in users` },
+        { label: 'Last 24 hours', value: day.length, note: 'new reports' },
+        { label: 'Flooded now', value: activeFloods, note: 'danger reports, last 24 h', cls: activeFloods ? 'bad' : '' },
+        { label: 'Users', value: users.length, note: 'signed in at least once' },
+      ];
+      $('cards').innerHTML = cards.map(c => `<div class="card ${c.cls || ''}"><div class="label">${esc(c.label)}</div><strong>${esc(c.value)}</strong><small>${esc(c.note)}</small></div>`).join('');
+    }
+
+    function filteredReports() {
+      const q = $('q').value.trim().toLowerCase();
+      const type = $('fType').value, status = $('fStatus').value, age = Number($('fAge').value);
+      return reports.filter(r => {
+        if (type && r.type !== type) return false;
+        if (status && r.status !== status) return false;
+        const hrs = (Date.now() - new Date(r.time)) / HOUR;
+        if (age > 0 && hrs > age) return false;
+        if (age < 0 && hrs <= -age) return false;
+        if (q && ![r.area, r.details, r.who, r.authorEmail].some(v => String(v || '').toLowerCase().includes(q))) return false;
+        return true;
+      });
+    }
+
+    function renderReports() {
+      const list = filteredReports();
+      $('reportCount').textContent = `${list.length} of ${reports.length}`;
+      $('reportRows').innerHTML = list.length ? list.map(r => `
+        <tr class="${selected.has(r.id) ? 'selected' : ''}">
+          <td class="check"><input type="checkbox" data-select="${r.id}" ${selected.has(r.id) ? 'checked' : ''} aria-label="Select report" /></td>
+          <td class="meta">${esc(fmtTime(r.time))}<br/>${esc(ago(r.time))}</td>
+          <td><div class="area">${esc(r.area)}</div><div class="details">${esc(r.details)}</div></td>
+          <td><span class="pill type">${esc(r.type)}</span> <span class="pill ${esc(r.status)}">${esc(STATUS_LABEL[r.status] || r.status)}</span></td>
+          <td>${esc(r.who || '—')}${r.authorEmail ? `<div class="meta">${esc(r.authorEmail)}</div>` : '<div class="meta">not signed in</div>'}</td>
+          <td><div class="row-actions"><button class="btn secondary small" type="button" data-edit="${r.id}">Edit</button><button class="btn danger small" type="button" data-delete="${r.id}">Delete</button></div></td>
+        </tr>`).join('') : `<tr><td colspan="6" class="empty">${reports.length ? 'No reports match these filters.' : 'No reports yet.'}</td></tr>`;
+      const shownIds = list.map(r => r.id);
+      $('selectAll').checked = shownIds.length > 0 && shownIds.every(id => selected.has(id));
+      $('deleteSelected').disabled = selected.size === 0;
+      $('deleteSelected').textContent = selected.size ? `Delete selected (${selected.size})` : 'Delete selected';
+    }
+
+    function renderUsers() {
+      $('userRows').innerHTML = users.length ? users.map(u => `
+        <tr>
+          <td class="area">${esc(u.displayName || '—')}</td>
+          <td>${esc(u.email)}</td>
+          <td class="meta">${esc(fmtTime(u.createdAt))}</td>
+          <td>${esc(u.reportCount)}</td>
+          <td class="meta">${u.lastReport ? esc(ago(u.lastReport)) : '—'}</td>
+          <td>${u.reportCount ? `<button class="btn danger small" type="button" data-user-purge="${u.id}">Delete their reports</button>` : ''}</td>
+        </tr>`).join('') : '<tr><td colspan="6" class="empty">No signed-in users yet.</td></tr>';
+    }
+
+    // ----- actions -----
+
+    async function deleteReports(ids) {
+      if (!ids.length) return;
+      if (!confirm(`Permanently delete ${ids.length} report${ids.length === 1 ? '' : 's'}? This can't be undone.`)) return;
+      try {
+        const { removed } = await api('/api/admin/reports/delete', { method: 'POST', body: { ids } });
+        ids.forEach(id => selected.delete(id));
+        toast(`Deleted ${removed} report${removed === 1 ? '' : 's'}.`);
+        await Promise.all([loadReports(), loadUsers()]);
+      } catch (err) { toast(err.message); }
+    }
+
+    function openEdit(id) {
+      const r = reports.find(x => x.id === id); if (!r) return;
+      editingId = id;
+      $('eType').value = r.type; $('eStatus').value = r.status;
+      $('eArea').value = r.area; $('eDetails').value = r.details; $('eWho').value = r.who || 'Community member';
+      $('editDialog').showModal();
+    }
+
+    $('editForm').onsubmit = async e => {
+      e.preventDefault();
+      const submit = e.target.querySelector('[type=submit]'); submit.disabled = true;
+      try {
+        await api(`/api/admin/reports/${editingId}`, { method: 'PATCH', body: { type: $('eType').value, status: $('eStatus').value, area: $('eArea').value, details: $('eDetails').value, who: $('eWho').value } });
+        $('editDialog').close();
+        toast('Report updated.');
+        await loadReports();
+      } catch (err) { toast(err.message); }
+      finally { submit.disabled = false; }
+    };
+    document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => $('editDialog').close());
+
+    $('reportRows').addEventListener('click', e => {
+      const t = e.target;
+      if (t.dataset.select) { const id = Number(t.dataset.select); t.checked ? selected.add(id) : selected.delete(id); renderReports(); }
+      else if (t.dataset.edit) openEdit(Number(t.dataset.edit));
+      else if (t.dataset.delete) deleteReports([Number(t.dataset.delete)]);
+    });
+    $('selectAll').onchange = e => { filteredReports().forEach(r => e.target.checked ? selected.add(r.id) : selected.delete(r.id)); renderReports(); };
+    $('deleteSelected').onclick = () => deleteReports([...selected]);
+    for (const id of ['q', 'fType', 'fStatus', 'fAge']) $(id).addEventListener('input', renderReports);
+
+    $('userRows').addEventListener('click', async e => {
+      const id = Number(e.target.dataset.userPurge); if (!id) return;
+      const u = users.find(x => x.id === id);
+      if (!confirm(`Permanently delete all ${u?.reportCount ?? ''} reports by ${u?.displayName || u?.email}? This can't be undone.`)) return;
+      try {
+        const { removed } = await api(`/api/admin/users/${id}/delete-reports`, { method: 'POST' });
+        toast(`Deleted ${removed} report${removed === 1 ? '' : 's'}.`);
+        await Promise.all([loadReports(), loadUsers()]);
+      } catch (err) { toast(err.message); }
+    });
+
+    $('purgeBtn').onclick = async () => {
+      const days = Number($('purgeDays').value);
+      if (!Number.isInteger(days) || days < 1 || days > 365) return toast('Choose between 1 and 365 days.');
+      const count = reports.filter(r => Date.now() - new Date(r.time) > days * 24 * HOUR).length;
+      if (!confirm(`Permanently delete every report older than ${days} day${days === 1 ? '' : 's'} (${count} right now)? This can't be undone.`)) return;
+      try {
+        const { removed } = await api('/api/admin/reports/purge', { method: 'POST', body: { olderThanDays: days } });
+        toast(`Deleted ${removed} old report${removed === 1 ? '' : 's'}.`);
+        await Promise.all([loadReports(), loadUsers()]);
+      } catch (err) { toast(err.message); }
+    };
+    $('recheckDb').onclick = loadHealth;
+
+    document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+      for (const name of ['reports', 'users', 'maintenance']) $(`tab-${name}`).hidden = name !== tab.dataset.tab;
+    });
+  </script>
+</body>
+</html>

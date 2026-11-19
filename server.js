@@ -1,9 +1,10 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createHash, timingSafeEqual } from 'crypto';
 import { db } from './src/db/index.ts';
 import { reports, users } from './src/db/schema.ts';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { adminAuth } from './src/lib/firebase-admin.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,10 +14,10 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = '0.0.0.0';
 
-// Comma-separated emails allowed to remove any report, e.g. "me@example.com,mod@example.com".
-const ADMIN_EMAILS = new Set(
-  (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-);
+// The one admin account, fixed in code so it can't be changed through settings or the API.
+// Stored as a SHA-256 fingerprint of the admin's verified Google email (lowercased),
+// so the email address itself never appears in the repository.
+const ADMIN_EMAIL_SHA256 = 'c7a6c722479da7e171185723ab6ef8b56aac1119721d4bb6fd67427f542d83ee';
 
 // Cloud Run and most hosts sit behind exactly one proxy; this makes req.ip the real client IP.
 app.set('trust proxy', 1);
@@ -27,6 +28,7 @@ const PUBLIC_FILES = {
   '/': 'index.html',
   '/index.html': 'index.html',
   '/firebase-applet-config.json': 'firebase-applet-config.json',
+  '/admin': 'admin.html',
 };
 for (const [route, file] of Object.entries(PUBLIC_FILES)) {
   app.get(route, (_req, res) => res.sendFile(path.join(__dirname, file)));
@@ -86,12 +88,23 @@ setInterval(() => {
   }
 }, WRITE_WINDOW_MS).unref();
 
-// Verifies the Firebase ID token (if any) and returns { decoded, dbUser }, creating the user row on first use.
-async function getSignedInUser(req) {
+// Verifies the Firebase ID token (if any). Needs no database, so admin checks work even when the DB is down.
+async function verifyToken(req) {
   const header = req.headers.authorization || '';
   if (!header.startsWith('Bearer ')) return null;
   try {
-    const decoded = await adminAuth.verifyIdToken(header.slice(7));
+    return await adminAuth.verifyIdToken(header.slice(7));
+  } catch (err) {
+    console.warn('Auth verification failed:', err.message);
+    return null;
+  }
+}
+
+// Returns { decoded, dbUser }, creating the user row on first use. Null if not signed in or the DB is unavailable.
+async function getSignedInUser(req) {
+  const decoded = await verifyToken(req);
+  if (!decoded) return null;
+  try {
     let [dbUser] = await db.select().from(users).where(eq(users.uid, decoded.uid)).limit(1);
     if (!dbUser) {
       [dbUser] = await db.insert(users).values({
@@ -102,12 +115,19 @@ async function getSignedInUser(req) {
     }
     return { decoded, dbUser };
   } catch (err) {
-    console.warn('Auth verification failed:', err.message);
+    console.warn('User lookup failed:', err.message);
     return null;
   }
 }
 
-const isAdmin = signedIn => !!signedIn?.decoded.email && ADMIN_EMAILS.has(signedIn.decoded.email.toLowerCase());
+// Admin only if Google has verified the email AND its fingerprint matches the admin's.
+function isAdmin(signedIn) {
+  const email = signedIn?.decoded.email;
+  if (!email || signedIn.decoded.email_verified !== true) return false;
+  const fingerprint = createHash('sha256').update(email.trim().toLowerCase()).digest();
+  const expected = Buffer.from(ADMIN_EMAIL_SHA256, 'hex');
+  return fingerprint.length === expected.length && timingSafeEqual(fingerprint, expected);
+}
 
 // Signed-in posters always appear under their Google name, so nobody can post as them.
 function posterName(signedIn, typedName) {
@@ -155,9 +175,10 @@ app.get('/api/reports', async (_req, res) => {
 
 // Who am I? Lets the page show "Remove" on the viewer's own reports (or all, for admins).
 app.get('/api/me', async (req, res) => {
+  const decoded = await verifyToken(req);
+  if (!decoded) return res.json({ signedIn: false });
   const signedIn = await getSignedInUser(req);
-  if (!signedIn) return res.json({ signedIn: false });
-  res.json({ signedIn: true, userId: signedIn.dbUser.id, isAdmin: isAdmin(signedIn) });
+  res.json({ signedIn: true, userId: signedIn?.dbUser.id ?? null, isAdmin: isAdmin({ decoded }) });
 });
 
 app.post('/api/reports', rateLimitWrites, async (req, res) => {
@@ -207,7 +228,7 @@ app.post('/api/reports/:id/clear', rateLimitWrites, async (req, res) => {
   }
 });
 
-// Remove a report: its signed-in author, or an admin listed in ADMIN_EMAILS.
+// Remove a report: its signed-in author, or the admin.
 app.delete('/api/reports/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid report id.' });
@@ -225,6 +246,129 @@ app.delete('/api/reports/:id', async (req, res) => {
   } catch (err) {
     console.error('Failed to remove report:', err);
     res.status(500).json({ error: 'Failed to remove report' });
+  }
+});
+
+// ---------- admin API (admin account only) ----------
+
+async function requireAdmin(req, res, next) {
+  const decoded = await verifyToken(req);
+  if (!decoded) return res.status(401).json({ error: 'Sign in first.' });
+  if (!isAdmin({ decoded })) return res.status(403).json({ error: 'Admin only.' });
+  req.admin = decoded;
+  next();
+}
+app.use('/api/admin', requireAdmin);
+
+const parseIds = value => (Array.isArray(value) ? value : [])
+  .map(Number).filter(Number.isInteger).slice(0, 500);
+
+// Database health: lets the admin see the real DB error instead of a generic 500.
+app.get('/api/admin/health', async (_req, res) => {
+  const started = Date.now();
+  try {
+    const [{ count }] = await db.select({ count: sql`count(*)::int` }).from(reports);
+    res.json({ db: { ok: true, ms: Date.now() - started, reports: count } });
+  } catch (err) {
+    res.json({ db: { ok: false, ms: Date.now() - started, error: err.cause?.message || err.message } });
+  }
+});
+
+app.get('/api/admin/reports', async (_req, res) => {
+  try {
+    const rows = await db.select({
+      id: reports.id, type: reports.type, status: reports.status, area: reports.area,
+      details: reports.details, who: reports.who, lat: reports.lat, lng: reports.lng,
+      approximate: reports.approximate, time: reports.time, userId: reports.userId,
+      authorEmail: users.email,
+    }).from(reports).leftJoin(users, eq(reports.userId, users.id)).orderBy(desc(reports.time)).limit(2000);
+    res.json(rows);
+  } catch (err) {
+    console.error('Admin: failed to list reports:', err);
+    res.status(500).json({ error: 'Failed to load reports' });
+  }
+});
+
+app.patch('/api/admin/reports/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid report id.' });
+  const changes = {};
+  if (req.body?.type !== undefined) {
+    if (!TYPES.has(req.body.type)) return res.status(400).json({ error: 'Invalid report type.' });
+    changes.type = req.body.type;
+  }
+  if (req.body?.status !== undefined) {
+    if (!STATUSES.has(req.body.status)) return res.status(400).json({ error: 'Invalid status.' });
+    changes.status = req.body.status;
+  }
+  for (const [field, max] of [['area', 70], ['details', 240], ['who', 40]]) {
+    if (req.body?.[field] !== undefined) {
+      const value = cleanText(req.body[field], max);
+      if (!value) return res.status(400).json({ error: `The ${field} field can not be empty.` });
+      changes[field] = value;
+    }
+  }
+  if (!Object.keys(changes).length) return res.status(400).json({ error: 'Nothing to change.' });
+  try {
+    const [updated] = await db.update(reports).set(changes).where(eq(reports.id, id)).returning();
+    if (!updated) return res.status(404).json({ error: 'Report not found.' });
+    res.json(updated);
+  } catch (err) {
+    console.error('Admin: failed to update report:', err);
+    res.status(500).json({ error: 'Failed to update report' });
+  }
+});
+
+app.post('/api/admin/reports/delete', async (req, res) => {
+  const ids = parseIds(req.body?.ids);
+  if (!ids.length) return res.status(400).json({ error: 'No reports selected.' });
+  try {
+    const removed = await db.delete(reports).where(inArray(reports.id, ids)).returning({ id: reports.id });
+    res.json({ removed: removed.length });
+  } catch (err) {
+    console.error('Admin: failed to delete reports:', err);
+    res.status(500).json({ error: 'Failed to delete reports' });
+  }
+});
+
+// Delete every report older than N days (1-365).
+app.post('/api/admin/reports/purge', async (req, res) => {
+  const days = Number(req.body?.olderThanDays);
+  if (!Number.isInteger(days) || days < 1 || days > 365) return res.status(400).json({ error: 'Choose between 1 and 365 days.' });
+  try {
+    const cutoff = new Date(Date.now() - days * 86400000);
+    const removed = await db.delete(reports).where(lt(reports.time, cutoff)).returning({ id: reports.id });
+    res.json({ removed: removed.length });
+  } catch (err) {
+    console.error('Admin: failed to purge reports:', err);
+    res.status(500).json({ error: 'Failed to purge reports' });
+  }
+});
+
+app.get('/api/admin/users', async (_req, res) => {
+  try {
+    const rows = await db.select({
+      id: users.id, email: users.email, displayName: users.displayName, createdAt: users.createdAt,
+      reportCount: sql`count(${reports.id})::int`,
+      lastReport: sql`max(${reports.time})`,
+    }).from(users).leftJoin(reports, eq(reports.userId, users.id)).groupBy(users.id).orderBy(desc(users.createdAt));
+    res.json(rows);
+  } catch (err) {
+    console.error('Admin: failed to list users:', err);
+    res.status(500).json({ error: 'Failed to load users' });
+  }
+});
+
+// Remove all reports posted by one signed-in user (e.g. a spammer).
+app.post('/api/admin/users/:id/delete-reports', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid user id.' });
+  try {
+    const removed = await db.delete(reports).where(eq(reports.userId, id)).returning({ id: reports.id });
+    res.json({ removed: removed.length });
+  } catch (err) {
+    console.error('Admin: failed to delete user reports:', err);
+    res.status(500).json({ error: 'Failed to delete reports' });
   }
 });
 
